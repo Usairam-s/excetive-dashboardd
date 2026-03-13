@@ -1,0 +1,3697 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gross Collected Revenue Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script
+      src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.11/dist/dotlottie-wc.js"
+      type="module"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #1a1a1a;
+        color: #e5e7eb;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0;
+      }
+      .header {
+        background: #1a1a1a;
+        padding: 32px;
+        color: white;
+        border-radius: 0;
+        margin: 0 20px 20px 20px;
+        border-bottom: 1px solid #2d2d2d;
+      }
+      .header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        margin-bottom: 16px;
+      }
+      .card-header h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #e5e7eb;
+      }
+      .period-selector {
+        display: flex;
+        gap: 8px;
+        background: #2d2d2d;
+        padding: 4px;
+        border-radius: 8px;
+      }
+      .period-btn {
+        padding: 8px 16px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #9ca3af;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      .period-btn.active {
+        background: #3d3d3d;
+        color: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+      .dashboard-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        padding: 0 20px;
+        margin-bottom: 32px;
+      }
+      .dashboard-cards.two-column {
+        grid-template-columns: 1fr 1fr;
+      }
+      .card-section {
+        display: flex;
+        flex-direction: column;
+      }
+      .card-section .card-header {
+        margin-bottom: 16px;
+        padding: 0;
+      }
+      .card {
+        background: #2d2d2d;
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+      }
+      .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        font-size: 20px;
+        color: white;
+      }
+      .card-new .card-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+      .card-existing .card-icon {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+      .card-recovery .card-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+      .card-net .card-icon {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+      .card-revenue-per-client .card-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+      .card-title {
+        font-size: 14px;
+        color: #9ca3af;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+      .card-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 4px;
+      }
+      .card-subtitle {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .loading {
+        position: fixed;
+        top: 400px;
+        left: 0;
+        width: 100vw;
+        height: calc(100vh - 400px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1a1a1a;
+        z-index: 1000;
+      }
+      .logic-explanation {
+        margin: 20px;
+        padding: 20px;
+        background: #e0f2fe;
+        border-radius: 8px;
+        border-left: 4px solid #0288d1;
+      }
+      .debug-section {
+        margin: 20px;
+        padding: 20px;
+        background: #f1f5f9;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      /* Tab Styles */
+      .tab-navigation {
+        display: flex;
+        background: #2d2d2d;
+        border-radius: 8px;
+        padding: 4px;
+        margin: 20px;
+        gap: 4px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        color: #9ca3af;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+
+      .tab-btn:hover {
+        background: #3d3d3d;
+        color: #e5e7eb;
+      }
+
+      .tab-btn.active {
+        background: #f97316;
+        color: white;
+        box-shadow: 0 2px 4px rgba(249, 115, 22, 0.4);
+      }
+
+      .refresh-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 4px;
+        padding: 4px 6px;
+        cursor: pointer;
+        color: inherit;
+        margin-left: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .refresh-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(180deg);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .funnel-tab-content {
+        display: none;
+      }
+
+      /* Compact Metric Tabs */
+      .metric-tabs {
+        display: flex;
+        gap: 16px;
+        padding: 0 20px;
+        margin-bottom: 32px;
+        justify-content: space-between;
+      }
+
+      .metric-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: #2d2d2d;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        transition: all 0.2s ease;
+        min-height: 80px;
+      }
+
+      .metric-tab:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        border-color: #4d4d4d;
+      }
+
+      .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: white;
+        flex-shrink: 0;
+      }
+
+      .metric-tab-new .metric-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .metric-tab-existing .metric-icon {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+
+      .metric-tab-recovery .metric-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      .metric-tab-net .metric-icon {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+
+      .metric-tab-arpu .metric-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+
+      .metric-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .metric-title {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+
+      .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 2px;
+        line-height: 1;
+      }
+
+      .metric-subtitle {
+        font-size: 11px;
+        color: #6b7280;
+        line-height: 1;
+      }
+
+      /* Professional Chart Container */
+      .chart-container {
+        margin: 0 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        overflow: hidden;
+      }
+
+      .chart-header {
+        padding: 24px 24px 0 24px;
+        border-bottom: 1px solid #3d3d3d;
+        margin-bottom: 0;
+      }
+
+      .chart-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0;
+        padding-bottom: 16px;
+      }
+
+      .chart-wrapper {
+        padding: 24px;
+        height: 300px;
+        position: relative;
+      }
+
+      /* Section Headers */
+      .section-header {
+        padding: 0 20px;
+        margin: 24px 0 16px 0;
+      }
+
+      .section-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0 0 4px 0;
+      }
+
+      .section-header p {
+        font-size: 14px;
+        color: #9ca3af;
+        margin: 0;
+      }
+
+      .funnel-tab-content.active {
+        display: block;
+      }
+
+      /* NEW: Funnel Flow Visualization */
+      .funnel-flow-container {
+        margin: 0 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        padding: 24px;
+      }
+
+      .funnel-flow-header {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin-bottom: 20px;
+      }
+
+      .funnel-flow-chart {
+        height: 200px;
+        position: relative;
+      }
+
+      /* NEW: Split Risk Card */
+      .split-risk-card {
+        margin: 0 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        overflow: hidden;
+        display: flex;
+        height: 200px;
+      }
+
+      .risk-half {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .risk-half:hover {
+        transform: scale(1.02);
+      }
+
+      .risk-half-left {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+      }
+
+      .risk-half-right {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+      }
+
+      .risk-icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+        opacity: 0.9;
+      }
+
+      .risk-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        opacity: 0.95;
+      }
+
+      .risk-count {
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        line-height: 1;
+      }
+
+      .risk-amount {
+        font-size: 20px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+
+      /* NEW: Appointment Funnel Visualization */
+      .appointment-viz-container {
+        margin: 20px 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        padding: 24px;
+      }
+
+      .appointment-viz-header {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin-bottom: 20px;
+      }
+
+      .appointment-viz-chart {
+        height: 200px;
+        position: relative;
+      }
+
+      /* Alert Banner Styles */
+      .alert-banner {
+        margin: 0 20px 20px 20px;
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        border: 1px solid #ef4444;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .alert-content {
+        padding: 16px 20px;
+        position: relative;
+      }
+
+      .alert-scroll {
+        overflow: hidden;
+        white-space: nowrap;
+        position: relative;
+      }
+
+      .alert-messages {
+        display: inline-block;
+        animation: scroll-left 30s linear infinite;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .alert-item {
+        display: inline-block;
+        margin-right: 60px;
+        padding: 0 20px;
+      }
+
+      .alert-icon {
+        margin-right: 8px;
+        font-size: 18px;
+      }
+
+      @keyframes scroll-left {
+        0% {
+          transform: translateX(100%);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+
+      .alert-banner.no-alerts {
+        display: none !important;
+      }
+
+      /* Alert Status Colors */
+      .metric-tab.alert-red {
+        border: 2px solid #ef4444;
+        background: linear-gradient(
+          135deg,
+          rgba(239, 68, 68, 0.1),
+          rgba(220, 38, 38, 0.05)
+        );
+      }
+
+      .metric-tab.alert-red .metric-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+      }
+
+      .metric-tab.alert-green {
+        border: 2px solid #10b981;
+        background: linear-gradient(
+          135deg,
+          rgba(16, 185, 129, 0.1),
+          rgba(5, 150, 105, 0.05)
+        );
+      }
+
+      .metric-tab.alert-green .metric-icon {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+      }
+
+      /* Effective Lifetime Card */
+      .effective-lifetime-card {
+        margin: 0 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        padding: 32px;
+      }
+
+      .effective-lifetime-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .effective-lifetime-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ec4899, #db2777);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+      }
+
+      .effective-lifetime-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #e5e7eb;
+      }
+
+      .effective-lifetime-main {
+        text-align: center;
+        margin-bottom: 24px;
+        padding: 20px;
+        background: rgba(236, 72, 153, 0.1);
+        border-radius: 12px;
+        border: 1px solid rgba(236, 72, 153, 0.2);
+      }
+
+      .effective-lifetime-value {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ec4899;
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+
+      .effective-lifetime-label {
+        font-size: 14px;
+        color: #9ca3af;
+        font-weight: 500;
+      }
+
+      .effective-lifetime-details {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding-top: 20px;
+        border-top: 1px solid #3d3d3d;
+      }
+
+      .effective-lifetime-detail {
+        text-align: center;
+      }
+
+      .effective-lifetime-detail-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+      }
+
+      .effective-lifetime-detail-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #e5e7eb;
+      }
+
+      .effective-lifetime-note {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 8px;
+        border-left: 3px solid #3b82f6;
+        font-size: 12px;
+        color: #9ca3af;
+      }
+
+      /* Skeleton Loading */
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          #3d3d3d 25%,
+          #4d4d4d 50%,
+          #3d3d3d 75%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .skeleton-large {
+        width: 120px;
+        height: 48px;
+      }
+
+      .skeleton-small {
+        width: 60px;
+        height: 20px;
+      }
+
+      @keyframes skeleton-loading {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      /* Signup to Paid Conversion Card */
+      .split-conversion-card {
+        margin: 0 20px 32px 20px;
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        overflow: hidden;
+      }
+
+      .conversion-header {
+        padding: 20px 24px 16px 24px;
+        border-bottom: 1px solid #3d3d3d;
+      }
+
+      .conversion-header h3 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0;
+      }
+
+      .conversion-split {
+        display: flex;
+        height: 180px;
+      }
+
+      .conversion-half {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .conversion-half:hover {
+        transform: scale(1.02);
+      }
+
+      .conversion-half-left {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-right: 1px solid #3d3d3d;
+      }
+
+      .conversion-half-right {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+      }
+
+      .conversion-icon {
+        font-size: 28px;
+        margin-bottom: 12px;
+        opacity: 0.9;
+      }
+
+      .conversion-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 12px;
+        opacity: 0.95;
+      }
+
+      .conversion-rate {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        line-height: 1;
+      }
+
+      .conversion-details {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .conversion-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+      }
+
+      .conversion-detail-label {
+        opacity: 0.8;
+      }
+
+      .conversion-detail-value {
+        font-weight: 600;
+      }
+
+      /* Table Styles for Client Health */
+      .table-container {
+        background: #2d2d2d;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        border: 1px solid #3d3d3d;
+        overflow: hidden;
+      }
+
+      .table-wrapper {
+        overflow-x: auto;
+      }
+
+      .retention-table,
+      .growth-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .retention-table th,
+      .growth-table th {
+        background: #3d3d3d;
+        color: #e5e7eb;
+        font-weight: 600;
+        padding: 16px 12px;
+        text-align: left;
+        border-bottom: 1px solid #4d4d4d;
+      }
+
+      .retention-table td,
+      .growth-table td {
+        padding: 12px;
+        border-bottom: 1px solid #3d3d3d;
+        color: #e5e7eb;
+      }
+
+      .retention-table tbody tr:hover,
+      .growth-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .retention-table tbody tr:last-child td,
+      .growth-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .positive-growth {
+        color: #10b981;
+        font-weight: 600;
+      }
+
+      .negative-growth {
+        color: #ef4444;
+        font-weight: 600;
+      }
+
+      .neutral-growth {
+        color: #6b7280;
+        font-weight: 600;
+      }
+
+      /* Show Rate Tab Styles */
+      .show-rate-controls {
+        display: flex;
+        align-items: center;
+      }
+
+      .top-sources-select {
+        background: #2d2d2d;
+        color: #e5e7eb;
+        border: 1px solid #3d3d3d;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .top-sources-select:focus {
+        outline: none;
+        border-color: #f97316;
+      }
+
+      .show-rate-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .show-rate-table th {
+        background: #3d3d3d;
+        color: #e5e7eb;
+        font-weight: 600;
+        padding: 16px 12px;
+        text-align: left;
+        border-bottom: 1px solid #4d4d4d;
+      }
+
+      .show-rate-table td {
+        padding: 12px;
+        border-bottom: 1px solid #3d3d3d;
+        color: #e5e7eb;
+      }
+
+      .show-rate-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .show-rate-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .source-name {
+        font-weight: 600;
+        text-transform: capitalize;
+      }
+
+      .show-rate-value {
+        font-weight: 600;
+      }
+
+      .show-rate-high {
+        color: #10b981;
+      }
+
+      .show-rate-medium {
+        color: #f59e0b;
+      }
+
+      .show-rate-low {
+        color: #ef4444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Executive Dashboard</h1>
+      </div>
+
+      <!-- Alert Metrics -->
+      <div class="section-header" style="margin-top: 0; margin-bottom: 12px">
+        <h3>
+          <i class="fas fa-bell" style="margin-right: 8px; color: #f97316"></i
+          >System Alerts
+        </h3>
+        <p>Real-time performance monitoring</p>
+      </div>
+      <div
+        id="alert-metrics"
+        class="metric-tabs"
+        style="display: none; margin-bottom: 20px"
+      >
+        <div class="metric-tab" id="alert-show-rate">
+          <div
+            class="metric-icon"
+            style="background: linear-gradient(135deg, #10b981, #059669)"
+          >
+            <i class="fas fa-percentage"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-title">Show Rate (7 Days)</div>
+            <div class="metric-value" id="alert-show-rate-value">--</div>
+            <div class="metric-subtitle">Target: ≥55%</div>
+          </div>
+        </div>
+
+        <div class="metric-tab" id="alert-arpu">
+          <div
+            class="metric-icon"
+            style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+          >
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-title">ARPU (WoW)</div>
+            <div class="metric-value" id="alert-arpu-value">--</div>
+            <div class="metric-subtitle">Target: ≤10% decline</div>
+          </div>
+        </div>
+
+        <div class="metric-tab" id="alert-revenue">
+          <div
+            class="metric-icon"
+            style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+          >
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-title">Net Revenue (WoW)</div>
+            <div class="metric-value" id="alert-revenue-value">--</div>
+            <div class="metric-subtitle">Target: No decline</div>
+          </div>
+        </div>
+
+        <div class="metric-tab" id="alert-noshow">
+          <div
+            class="metric-icon"
+            style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+          >
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-title">No-Show Loss (7 Days)</div>
+            <div class="metric-value" id="alert-noshow-value">--</div>
+            <div class="metric-subtitle">Target: ≤$1,000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="gross-revenue">
+          <i class="fas fa-chart-line"></i>
+          Gross Revenue
+          <button class="refresh-btn" onclick="refreshTab('gross-revenue')">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </button>
+        <button class="tab-btn" data-tab="funnel-snapshot">
+          <i class="fas fa-funnel-dollar"></i>
+          Funnel Snapshot
+          <button class="refresh-btn" onclick="refreshTab('funnel-snapshot')">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </button>
+        <button class="tab-btn" data-tab="client-base-health">
+          <i class="fas fa-heartbeat"></i>
+          Client Base Health
+          <button
+            class="refresh-btn"
+            onclick="refreshTab('client-base-health')"
+          >
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </button>
+        <button class="tab-btn" data-tab="show-rate">
+          <i class="fas fa-chart-bar"></i>
+          Show Rate
+          <button class="refresh-btn" onclick="refreshTab('show-rate')">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div id="gross-revenue-tab" class="tab-content active">
+        <div class="card-header" id="card-header" style="display: none">
+          <h2>Gross Collected Revenue</h2>
+          <div class="period-selector">
+            <button class="period-btn active" data-period="daily">Daily</button>
+            <button class="period-btn" data-period="weekly">Weekly</button>
+            <button class="period-btn" data-period="monthly">Monthly</button>
+          </div>
+        </div>
+
+        <!-- Compact Metric Tabs for Top 3 -->
+        <div class="metric-tabs" id="metric-tabs" style="display: none">
+          <div class="metric-tab metric-tab-new">
+            <div class="metric-icon"><i class="fas fa-user-plus"></i></div>
+            <div class="metric-content">
+              <div class="metric-title">New Enrollments</div>
+              <div class="metric-value" id="new-revenue">$0</div>
+              <div class="metric-subtitle">First 30 days revenue</div>
+            </div>
+          </div>
+
+          <div class="metric-tab metric-tab-existing">
+            <div class="metric-icon"><i class="fas fa-users"></i></div>
+            <div class="metric-content">
+              <div class="metric-title">Existing Clients</div>
+              <div class="metric-value" id="existing-revenue">$0</div>
+              <div class="metric-subtitle">After 30 days revenue</div>
+            </div>
+          </div>
+
+          <div class="metric-tab metric-tab-recovery">
+            <div class="metric-icon"><i class="fas fa-undo"></i></div>
+            <div class="metric-content">
+              <div class="metric-title">Recovery Revenue</div>
+              <div class="metric-value" id="recovery-revenue">$0</div>
+              <div class="metric-subtitle">Cancelled → Came back</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Professional Bar Chart -->
+        <div class="chart-container" id="chart-container" style="display: none">
+          <div class="chart-header">
+            <h3>Revenue Breakdown</h3>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="revenueChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+
+        <!-- Keep Original Second Row -->
+        <div
+          class="dashboard-cards two-column"
+          id="dashboard-cards-2"
+          style="display: none"
+        >
+          <div class="card-section">
+            <div class="card-header">
+              <h2>Net Revenue (After Processing Fees)</h2>
+            </div>
+            <div class="card card-net">
+              <div class="card-icon"><i class="fas fa-calculator"></i></div>
+              <div class="card-title">Total Net Revenue</div>
+              <div class="card-value" id="total-net-revenue">$0</div>
+              <div class="card-subtitle">
+                Gross revenue minus processing fees
+              </div>
+            </div>
+          </div>
+
+          <div class="card-section">
+            <div class="card-header">
+              <h2>Revenue Per Client</h2>
+            </div>
+            <div class="card card-revenue-per-client">
+              <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
+              <div class="card-title">Revenue Per Client</div>
+              <div class="card-value" id="revenue-per-client">$0</div>
+              <div class="card-subtitle">
+                Net revenue divided by active clients
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Effective Lifetime Card -->
+        <div
+          class="effective-lifetime-card"
+          id="effective-lifetime-card"
+          style="display: none"
+        >
+          <div class="effective-lifetime-header">
+            <div class="effective-lifetime-icon">
+              <i class="fas fa-hourglass-half"></i>
+            </div>
+            <div class="effective-lifetime-title">Effective Lifetime</div>
+          </div>
+
+          <div class="effective-lifetime-main">
+            <div
+              class="effective-lifetime-value"
+              id="effective-lifetime-months"
+            >
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="effective-lifetime-label">Months</div>
+          </div>
+
+          <div class="effective-lifetime-details">
+            <div class="effective-lifetime-detail">
+              <div class="effective-lifetime-detail-label">Active Clients</div>
+              <div
+                class="effective-lifetime-detail-value"
+                id="effective-lifetime-active"
+              >
+                <span class="skeleton skeleton-small"></span>
+              </div>
+            </div>
+            <div class="effective-lifetime-detail">
+              <div class="effective-lifetime-detail-label">
+                90-Day Cancellations
+              </div>
+              <div
+                class="effective-lifetime-detail-value"
+                id="effective-lifetime-cancellations"
+              >
+                <span class="skeleton skeleton-small"></span>
+              </div>
+            </div>
+            <div class="effective-lifetime-detail">
+              <div class="effective-lifetime-detail-label">
+                Avg Monthly Cancel
+              </div>
+              <div
+                class="effective-lifetime-detail-value"
+                id="effective-lifetime-avg"
+              >
+                <span class="skeleton skeleton-small"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="effective-lifetime-note">
+            <i class="fas fa-info-circle" style="margin-right: 6px"></i>
+            This metric is not affected by daily/weekly/monthly filters.
+            Formula: Active Clients ÷ Avg Monthly Cancellations
+          </div>
+        </div>
+      </div>
+
+      <!-- Funnel Snapshot Tab -->
+      <div id="funnel-snapshot-tab" class="tab-content">
+        <!-- SECTION 1: Time Filter Only -->
+        <div class="card-header" id="time-only-header" style="display: none">
+          <h2>Time-Based Metrics</h2>
+          <div class="period-selector">
+            <button class="period-btn active" data-period="daily">Daily</button>
+            <button class="period-btn" data-period="weekly">Weekly</button>
+            <button class="period-btn" data-period="monthly">Monthly</button>
+          </div>
+        </div>
+
+        <div
+          class="dashboard-cards"
+          id="time-only-metrics"
+          style="
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            margin-bottom: 24px;
+          "
+        >
+          <!-- Leads -->
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
+            >
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="card-title">Total Leads</div>
+            <div class="card-value" id="total-leads">0</div>
+            <div class="card-subtitle">New leads</div>
+          </div>
+
+          <!-- Enrolled -->
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+            >
+              <i class="fas fa-trophy"></i>
+            </div>
+            <div class="card-title">Enrolled</div>
+            <div class="card-value" id="enrolled-count-funnel">0</div>
+            <div
+              class="card-value"
+              id="enrolled-revenue-funnel"
+              style="font-size: 18px; color: #f59e0b"
+            >
+              $0
+            </div>
+            <div class="card-subtitle">Trial subscriptions</div>
+          </div>
+
+          <!-- Paid -->
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
+            >
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="card-title">Paid</div>
+            <div class="card-value" id="paid-count-funnel">0</div>
+            <div
+              class="card-value"
+              id="paid-revenue-funnel"
+              style="font-size: 18px; color: #10b981"
+            >
+              $0
+            </div>
+            <div class="card-subtitle">Active subscriptions</div>
+          </div>
+
+          <!-- Close Rate % -->
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+            >
+              <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="card-title">Close Rate %</div>
+            <div class="card-value" id="close-rate-percentage">0%</div>
+            <div class="card-subtitle">Enrolled ÷ Total Showed</div>
+          </div>
+
+          <!-- Pre-Billing Cancellations -->
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+            >
+              <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="card-title">Pre-Billing Cancel</div>
+            <div class="card-value" id="pre-billing-count">0</div>
+            <div
+              class="card-value"
+              id="pre-billing-amount"
+              style="font-size: 18px; color: #ef4444"
+            >
+              $0
+            </div>
+            <div class="card-subtitle">Cancelled before billing</div>
+          </div>
+        </div>
+
+        <!-- NEW: Funnel Flow Visualization -->
+        <div
+          class="funnel-flow-container"
+          id="funnel-flow-viz"
+          style="display: none"
+        >
+          <div class="funnel-flow-header">Conversion Flow</div>
+          <div class="funnel-flow-chart">
+            <canvas id="funnelFlowChart"></canvas>
+          </div>
+        </div>
+
+        <!-- NEW: Signup to Paid Conversion Card -->
+        <div
+          class="split-conversion-card"
+          id="split-conversion-card"
+          style="display: none"
+        >
+          <div class="conversion-header">
+            <h3>Signup to Paid Conversion</h3>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px">
+              <i class="fas fa-info-circle" style="margin-right: 4px"></i>
+              Based on signups from last 7 days
+            </div>
+          </div>
+
+          <div class="conversion-split">
+            <div class="conversion-half conversion-half-left">
+              <div class="conversion-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="conversion-title">7-Day Conversion</div>
+              <div class="conversion-rate" id="conversion-7day-rate">
+                <span class="skeleton skeleton-large"></span>
+              </div>
+              <div class="conversion-details">
+                <div class="conversion-detail">
+                  <span class="conversion-detail-label">Paid:</span>
+                  <span
+                    class="conversion-detail-value"
+                    id="conversion-7day-paid"
+                  >
+                    <span class="skeleton skeleton-small"></span>
+                  </span>
+                </div>
+                <div class="conversion-detail">
+                  <span class="conversion-detail-label">Total Enrolled:</span>
+                  <span
+                    class="conversion-detail-value"
+                    id="conversion-7day-total"
+                  >
+                    <span class="skeleton skeleton-small"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="conversion-half conversion-half-right">
+              <div class="conversion-icon">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+              <div class="conversion-title">14-Day Conversion</div>
+              <div class="conversion-rate" id="conversion-14day-rate">
+                <span class="skeleton skeleton-large"></span>
+              </div>
+              <div class="conversion-details">
+                <div class="conversion-detail">
+                  <span class="conversion-detail-label">Paid:</span>
+                  <span
+                    class="conversion-detail-value"
+                    id="conversion-14day-paid"
+                  >
+                    <span class="skeleton skeleton-small"></span>
+                  </span>
+                </div>
+                <div class="conversion-detail">
+                  <span class="conversion-detail-label">Total Enrolled:</span>
+                  <span
+                    class="conversion-detail-value"
+                    id="conversion-14day-total"
+                  >
+                    <span class="skeleton skeleton-small"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Revenue at Risk - NEW SPLIT CARD -->
+        <div
+          class="section-header"
+          id="risk-section-header"
+          style="display: none"
+        >
+          <h3>Revenue at Risk</h3>
+          <p>Not affected by time filters</p>
+        </div>
+
+        <div class="split-risk-card" id="split-risk-card" style="display: none">
+          <div class="risk-half risk-half-left">
+            <div class="risk-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="risk-title">Failed Payments</div>
+            <div class="risk-count" id="split-failed-count">0</div>
+            <div class="risk-amount" id="split-failed-amount">$0</div>
+            <div style="font-size: 12px; opacity: 0.8; margin-top: 4px">
+              Last 30 days
+            </div>
+          </div>
+          <div class="risk-half risk-half-right">
+            <div class="risk-icon"><i class="fas fa-clock"></i></div>
+            <div class="risk-title">Trials Ending</div>
+            <div class="risk-count" id="split-trials-count">0</div>
+            <div class="risk-amount" id="split-trials-amount">$0</div>
+            <div style="font-size: 12px; opacity: 0.8; margin-top: 4px">
+              Next 30 days
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: Time + Personal/Business Filters -->
+        <div class="card-header" id="dual-filter-header" style="display: none">
+          <h2>Appointment Funnel</h2>
+          <div class="period-selector">
+            <button class="period-btn active" data-period="daily">Daily</button>
+            <button class="period-btn" data-period="weekly">Weekly</button>
+            <button class="period-btn" data-period="monthly">Monthly</button>
+          </div>
+        </div>
+
+        <!-- Personal/Business Tabs -->
+        <div class="funnel-tabs" id="funnel-tabs" style="display: none">
+          <div class="tab-navigation">
+            <button class="tab-btn active" data-funnel-tab="personal">
+              <i class="fas fa-user"></i>
+              Personal
+            </button>
+            <button class="tab-btn" data-funnel-tab="business">
+              <i class="fas fa-building"></i>
+              Business
+            </button>
+          </div>
+
+          <!-- Personal Tab Content -->
+          <div id="personal-content" class="funnel-tab-content active">
+            <div
+              class="dashboard-cards"
+              style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                padding: 0 20px;
+                margin-bottom: 20px;
+              "
+            >
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                >
+                  <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-title">Booked</div>
+                <div class="card-value" id="personal-booked">0</div>
+                <div class="card-subtitle">Appointment scheduled</div>
+              </div>
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #10b981, #059669)"
+                >
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="card-title">Showed</div>
+                <div class="card-value" id="personal-showed">0</div>
+                <div class="card-subtitle">Appointment completed</div>
+              </div>
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+                >
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="card-title">No Show / Cancel</div>
+                <div class="card-value" id="personal-mishaps-count">0</div>
+                <div
+                  class="card-value"
+                  id="personal-mishaps-amount"
+                  style="font-size: 18px; color: #ef4444"
+                >
+                  $0
+                </div>
+                <div class="card-subtitle">Cancelled, invalid, no-show</div>
+              </div>
+            </div>
+
+            <!-- Show Rate % Card -->
+            <div
+              class="dashboard-cards"
+              style="
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 0 20px;
+                margin-bottom: 20px;
+              "
+            >
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #06b6d4, #0891b2)"
+                >
+                  <i class="fas fa-percentage"></i>
+                </div>
+                <div class="card-title">Show Rate %</div>
+                <div class="card-value" id="personal-show-rate">0%</div>
+                <div class="card-subtitle">Showed ÷ Booked × 100</div>
+              </div>
+            </div>
+
+            <!-- Personal Appointment Visualization -->
+            <div
+              class="appointment-viz-container"
+              id="personal-viz"
+              style="display: none"
+            >
+              <div class="appointment-viz-header">
+                Personal Conversion Funnel
+              </div>
+              <div class="appointment-viz-chart">
+                <canvas id="personalFunnelChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Business Tab Content -->
+          <div id="business-content" class="funnel-tab-content">
+            <div
+              class="dashboard-cards"
+              style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                padding: 0 20px;
+                margin-bottom: 20px;
+              "
+            >
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                >
+                  <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="card-title">Booked</div>
+                <div class="card-value" id="business-booked">0</div>
+                <div class="card-subtitle">Appointment scheduled</div>
+              </div>
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #10b981, #059669)"
+                >
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="card-title">Showed</div>
+                <div class="card-value" id="business-showed">0</div>
+                <div class="card-subtitle">Appointment completed</div>
+              </div>
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+                >
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="card-title">No Show / Cancel</div>
+                <div class="card-value" id="business-mishaps-count">0</div>
+                <div
+                  class="card-value"
+                  id="business-mishaps-amount"
+                  style="font-size: 18px; color: #ef4444"
+                >
+                  $0
+                </div>
+                <div class="card-subtitle">Cancelled, invalid, no-show</div>
+              </div>
+            </div>
+
+            <!-- Show Rate % Card -->
+            <div
+              class="dashboard-cards"
+              style="
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 0 20px;
+                margin-bottom: 20px;
+              "
+            >
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #06b6d4, #0891b2)"
+                >
+                  <i class="fas fa-percentage"></i>
+                </div>
+                <div class="card-title">Show Rate %</div>
+                <div class="card-value" id="business-show-rate">0%</div>
+                <div class="card-subtitle">Showed ÷ Booked × 100</div>
+              </div>
+            </div>
+
+            <!-- Business Appointment Visualization -->
+            <div
+              class="appointment-viz-container"
+              id="business-viz"
+              style="display: none"
+            >
+              <div class="appointment-viz-header">
+                Business Conversion Funnel
+              </div>
+              <div class="appointment-viz-chart">
+                <canvas id="businessFunnelChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Screen -->
+      <div id="loading" class="loading">
+        <dotlottie-wc
+          src="https://lottie.host/7f14a4a9-60b6-4177-9575-a08abe06d9d6/0zVOmlc7YY.lottie"
+          style="width: 400px; height: 400px"
+          autoplay
+          loop
+        ></dotlottie-wc>
+      </div>
+
+      <!-- Client Base Health Tab -->
+      <div id="client-base-health-tab" class="tab-content">
+        <div
+          class="card-header"
+          id="client-health-header"
+          style="display: none"
+        >
+          <h2>Client Base Health</h2>
+          <div class="period-selector">
+            <button class="period-btn active" data-period="daily">Daily</button>
+            <button class="period-btn" data-period="weekly">Weekly</button>
+            <button class="period-btn" data-period="monthly">Monthly</button>
+          </div>
+        </div>
+
+        <!-- Row 1: Metrics with Daily/Weekly/Monthly Filters -->
+        <div
+          class="dashboard-cards"
+          id="client-health-filtered"
+          style="
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            margin-bottom: 20px;
+          "
+        >
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
+            >
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="card-title">Active Clients</div>
+            <div class="card-value" id="active-clients-count">0</div>
+            <div class="card-subtitle">Currently paying customers</div>
+          </div>
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+            >
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="card-title">Net Client Growth</div>
+            <div class="card-value" id="net-client-growth">0</div>
+            <div class="card-subtitle">New clients - Lost clients</div>
+          </div>
+        </div>
+
+        <!-- Separator line -->
+        <!-- <div
+          style="border-top: 1px solid #e5e7eb; margin: 20px; opacity: 0.5"
+          id="client-health-separator"
+        ></div> -->
+
+        <!-- Row 2: Metrics without Filters -->
+        <div
+          class="dashboard-cards"
+          id="client-health-static"
+          style="display: none; grid-template-columns: 1fr 1fr"
+        >
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+            >
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="card-title">Retention Rate</div>
+            <div class="card-value" id="retention-rate">0%</div>
+            <div class="card-subtitle">Last month retention</div>
+          </div>
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+            >
+              <i class="fas fa-crystal-ball"></i>
+            </div>
+            <div class="card-title">90-Day Revenue Projection</div>
+            <div class="card-value" id="ninety-day-projection">$0</div>
+            <div class="card-subtitle">Expected revenue next 3 months</div>
+          </div>
+        </div>
+
+        <!-- Additional Client Health Metrics -->
+        <div id="additional-client-health" style="display: none">
+          <!-- Monthly Churn Rate Card -->
+          <div class="section-header">
+            <h3>Monthly Churn Rate</h3>
+            <p>Customer cancellation rate over the last 30 days</p>
+          </div>
+
+          <div
+            class="dashboard-cards"
+            style="grid-template-columns: 1fr; margin-bottom: 32px"
+          >
+            <div class="card">
+              <div
+                class="card-icon"
+                style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+              >
+                <i class="fas fa-user-times"></i>
+              </div>
+              <div class="card-title">Monthly Churn Rate</div>
+              <div class="card-value" id="monthly-churn-rate">
+                <span class="skeleton skeleton-large"></span>
+              </div>
+              <div class="card-subtitle" id="monthly-churn-details">
+                <span class="skeleton skeleton-small"></span> cancellations from
+                <span class="skeleton skeleton-small"></span> active clients
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Retention Cards -->
+          <div class="section-header">
+            <h3>Monthly Retention</h3>
+            <p>Customer retention rates by enrollment month</p>
+          </div>
+
+          <div
+            class="dashboard-cards"
+            style="grid-template-columns: 1fr 1fr; margin-bottom: 32px"
+          >
+            <div class="card">
+              <div
+                class="card-icon"
+                style="background: linear-gradient(135deg, #10b981, #059669)"
+              >
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="card-title">Month 2 Retention</div>
+              <div class="card-value" id="month2-retention-rate">
+                <span class="skeleton skeleton-large"></span>
+              </div>
+              <div class="card-subtitle" id="month2-retention-details">
+                <span class="skeleton skeleton-small"></span> of
+                <span class="skeleton skeleton-small"></span> still active
+              </div>
+            </div>
+
+            <div class="card">
+              <div
+                class="card-icon"
+                style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+              >
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+              <div class="card-title">Month 3 Retention</div>
+              <div class="card-value" id="month3-retention-rate">
+                <span class="skeleton skeleton-large"></span>
+              </div>
+              <div class="card-subtitle" id="month3-retention-details">
+                <span class="skeleton skeleton-small"></span> of
+                <span class="skeleton skeleton-small"></span> still active
+              </div>
+            </div>
+          </div>
+
+          <!-- Cohort Retention Table -->
+          <div class="section-header">
+            <h3>Cohort Retention Analysis</h3>
+            <p>Retention rates by signup month over time</p>
+          </div>
+
+          <div class="table-container" style="margin: 0 20px 32px 20px">
+            <div class="table-wrapper">
+              <table class="retention-table" id="cohort-retention-table">
+                <thead>
+                  <tr>
+                    <th>Signup Month</th>
+                    <th>Total Signups</th>
+                    <th>Month 1</th>
+                    <th>Month 2</th>
+                    <th>Month 3</th>
+                    <th>Month 4</th>
+                    <th>Month 5</th>
+                    <th>Month 6</th>
+                    <th>Currently Active</th>
+                  </tr>
+                </thead>
+                <tbody id="cohort-retention-tbody">
+                  <tr>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Weekly Net Growth Table -->
+          <div class="section-header">
+            <h3>Weekly Net Growth</h3>
+            <p>New vs lost customers by week</p>
+          </div>
+
+          <div class="growth-summary" style="margin: 0 20px 16px 20px">
+            <div
+              class="dashboard-cards"
+              style="
+                grid-template-columns: 1fr 1fr;
+                margin-bottom: 20px;
+                padding: 0;
+              "
+            >
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                >
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="card-title">Total Growth (5 weeks)</div>
+                <div class="card-value" id="total-growth">
+                  <span class="skeleton skeleton-large"></span>
+                </div>
+                <div class="card-subtitle">Net customer change</div>
+              </div>
+
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+                >
+                  <i class="fas fa-calculator"></i>
+                </div>
+                <div class="card-title">Average Weekly Growth</div>
+                <div class="card-value" id="avg-growth">
+                  <span class="skeleton skeleton-large"></span>
+                </div>
+                <div class="card-subtitle">Per week average</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container" style="margin: 0 20px 32px 20px">
+            <div class="table-wrapper">
+              <table class="growth-table" id="weekly-growth-table">
+                <thead>
+                  <tr>
+                    <th>Week</th>
+                    <th>New Customers</th>
+                    <th>Lost Customers</th>
+                    <th>Net Growth</th>
+                  </tr>
+                </thead>
+                <tbody id="weekly-growth-tbody">
+                  <tr>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                    <td><span class="skeleton skeleton-small"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Show Rate Tab -->
+      <div id="show-rate-tab" class="tab-content">
+        <div class="card-header" id="show-rate-header" style="display: none">
+          <h2>Show Rate by Source (Trcaked By GHL)</h2>
+          <div class="show-rate-controls">
+            <label
+              for="top-sources-select"
+              style="color: #9ca3af; margin-right: 8px; font-size: 14px"
+              >Show:</label
+            >
+            <select id="top-sources-select" class="top-sources-select">
+              <option value="3">Top 3</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="all">Show All</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div
+          class="dashboard-cards"
+          id="show-rate-summary"
+          style="
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            margin-bottom: 32px;
+          "
+        >
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
+            >
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="card-title">Total Booked</div>
+            <div class="card-value" id="total-booked-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">All appointment bookings</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+            >
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div class="card-title">Total Showed</div>
+            <div class="card-value" id="total-showed-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Appointments attended</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+            >
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="card-title">Total Mishaps</div>
+            <div class="card-value" id="total-mishaps-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">No show/cancel/invalid</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+            >
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="card-title">Overall Show Rate</div>
+            <div class="card-value" id="overall-show-rate">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Showed ÷ Booked × 100</div>
+          </div>
+        </div>
+
+        <!-- Show Rate Table -->
+        <div
+          class="table-container"
+          id="show-rate-table-container"
+          style="display: none; margin: 0 20px 32px 20px"
+        >
+          <div class="table-wrapper">
+            <table class="show-rate-table" id="show-rate-table">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Booked</th>
+                  <th>Showed</th>
+                  <th>Show Rate</th>
+                  <th>No Show/Cancel/Invalid</th>
+                  <th>No Show Rate</th>
+                </tr>
+              </thead>
+              <tbody id="show-rate-tbody">
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Submissions Section -->
+      <div
+        class="section-header"
+        id="form-submissions-section-header"
+        style="display: none; margin-top: 40px"
+      >
+        <h3>Form Submissions Funnel</h3>
+        <p>Conversion tracking from form submissions to appointments</p>
+      </div>
+
+      <!-- Form Submissions Table -->
+      <div
+        class="table-container"
+        id="form-submissions-section-container"
+        style="display: none; margin: 0 20px 32px 20px"
+      >
+        <div class="table-wrapper">
+          <table class="show-rate-table" id="form-submissions-section-table">
+            <thead>
+              <tr>
+                <th>Form Name</th>
+                <th>Total Submissions</th>
+                <th>Booked Personal</th>
+                <th>Booked Business</th>
+                <th>Showed Personal</th>
+                <th>Showed Business</th>
+                <th>Show Rate %</th>
+                <th>Mishaps Personal</th>
+                <th>Mishaps Business</th>
+                <th>No Show Rate %</th>
+              </tr>
+            </thead>
+            <tbody id="form-submissions-section-tbody">
+              <tr>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Form Submissions Tab -->
+      <div id="form-submissions-tab" class="tab-content">
+        <div
+          class="card-header"
+          id="form-submissions-header"
+          style="display: none"
+        >
+          <h2>Form Submissions Conversion Funnel</h2>
+          <div class="show-rate-controls">
+            <label
+              for="form-top-sources-select"
+              style="color: #9ca3af; margin-right: 8px; font-size: 14px"
+              >Show:</label
+            >
+            <select id="form-top-sources-select" class="top-sources-select">
+              <option value="3">Top 3</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="all">Show All</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div
+          class="dashboard-cards"
+          id="form-submissions-summary"
+          style="
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            margin-bottom: 32px;
+          "
+        >
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
+            >
+              <i class="fas fa-wpforms"></i>
+            </div>
+            <div class="card-title">Total Submissions</div>
+            <div class="card-value" id="total-submissions-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">All form submissions</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+            >
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="card-title">Contacts Created</div>
+            <div class="card-value" id="total-contacts-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Submissions → Contacts</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+            >
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="card-title">Appointments Booked</div>
+            <div class="card-value" id="total-form-booked-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Contacts → Appointments</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+            >
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div class="card-title">Appointments Showed</div>
+            <div class="card-value" id="total-form-showed-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Appointments attended</div>
+          </div>
+
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+            >
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="card-title">Overall Conversion</div>
+            <div class="card-value" id="overall-form-conversion">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Submissions → Showed</div>
+          </div>
+        </div>
+
+        <!-- Form Submissions Table -->
+        <div
+          class="table-container"
+          id="form-submissions-table-container"
+          style="display: none; margin: 0 20px 32px 20px"
+        >
+          <div class="table-wrapper">
+            <table class="show-rate-table" id="form-submissions-table">
+              <thead>
+                <tr>
+                  <th>Form Source</th>
+                  <th>Submissions</th>
+                  <th>Contacts</th>
+                  <th>Conversion %</th>
+                  <th>Booked</th>
+                  <th>Showed</th>
+                  <th>Show Rate</th>
+                  <th>No Show/Cancel</th>
+                </tr>
+              </thead>
+              <tbody id="form-submissions-tbody">
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+                <tr>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                  <td><span class="skeleton skeleton-small"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // const API_BASE_URL = "http://localhost:3000";
+      const API_BASE_URL = "https://excetive-dashboard.vercel.app";
+
+      let currentPeriod = "daily";
+      let currentTab = "gross-revenue";
+      let timeOnlyPeriod = "daily"; // Separate period for time-only section
+      let appointmentPeriod = "daily"; // Separate period for appointment section
+      let grossRevenueData = null;
+      let funnelSnapshotData = null;
+      let clientBaseHealthData = null;
+      let alertsData = null;
+      let effectiveLifetimeData = null;
+      let weeklyConversionData = null;
+      let monthlyChurnData = null;
+      let monthlyRetentionData = null;
+      let cohortRetentionData = null;
+      let weeklyNetGrowthData = null;
+      let showRateData = null;
+      let formSubmissionsData = null;
+      let currentTopSources = 3;
+      let currentFormTopSources = 3;
+
+      // Chart instances
+      let revenueChart = null;
+      let funnelFlowChart = null;
+      let personalFunnelChart = null;
+      let businessFunnelChart = null;
+
+      // Tab switching
+      document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const tabName = btn.dataset.tab;
+          switchTab(tabName);
+        });
+      });
+
+      // Refresh tab data
+      function refreshTab(tabName) {
+        if (tabName === "gross-revenue") {
+          currentPeriod = "daily";
+          grossRevenueData = null;
+          loadGrossRevenueData();
+        } else if (tabName === "funnel-snapshot") {
+          timeOnlyPeriod = "daily";
+          appointmentPeriod = "daily";
+          funnelSnapshotData = null;
+          loadFunnelSnapshotData();
+        } else if (tabName === "client-base-health") {
+          currentPeriod = "daily";
+          clientBaseHealthData = null;
+          loadClientBaseHealthData();
+        } else if (tabName === "show-rate") {
+          showRateData = null;
+          formSubmissionsData = null;
+          loadShowRateData();
+        } else if (tabName === "form-submissions") {
+          formSubmissionsData = null;
+          loadFormSubmissionsData();
+        }
+      }
+
+      // Load gross revenue data
+      async function loadGrossRevenueData() {
+        try {
+          document.getElementById("loading").style.display = "flex";
+
+          const response = await fetch(`${API_BASE_URL}/api/gross-revenue`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          grossRevenueData = await response.json();
+          updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
+
+          // Load effective lifetime data (independent of filters)
+          loadEffectiveLifetimeData();
+        } catch (error) {
+          console.error("Error loading gross revenue data:", error);
+          document.getElementById("loading").innerHTML =
+            '<div style="color: red; text-align: center;">Error loading data. Please try again.</div>';
+        }
+      }
+
+      // Load effective lifetime data
+      async function loadEffectiveLifetimeData() {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/effective-lifetime`,
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          effectiveLifetimeData = await response.json();
+          updateEffectiveLifetimeCard(effectiveLifetimeData);
+        } catch (error) {
+          console.error("Error loading effective lifetime data:", error);
+        }
+      }
+
+      // Update effective lifetime card
+      function updateEffectiveLifetimeCard(data) {
+        if (!data || !data.effectiveLifetime) return;
+
+        const lifetime = data.effectiveLifetime;
+
+        document.getElementById("effective-lifetime-months").textContent =
+          lifetime.months ? lifetime.months.toFixed(1) : "∞";
+        document.getElementById("effective-lifetime-active").textContent =
+          lifetime.activeClients.toLocaleString();
+        document.getElementById(
+          "effective-lifetime-cancellations",
+        ).textContent = lifetime.last90DaysCancellations.toLocaleString();
+        document.getElementById("effective-lifetime-avg").textContent =
+          lifetime.avgMonthlyCancellations.toFixed(1);
+      }
+
+      // Load funnel snapshot data
+      async function loadFunnelSnapshotData() {
+        try {
+          document.getElementById("loading").style.display = "flex";
+
+          // Load both APIs simultaneously
+          const [funnelResponse, conversionResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/funnel-snapshot`),
+            fetch(`${API_BASE_URL}/api/weekly-signup-paid-conversion`),
+          ]);
+
+          if (!funnelResponse.ok) {
+            throw new Error(
+              `Funnel API error! status: ${funnelResponse.status}`,
+            );
+          }
+
+          funnelSnapshotData = await funnelResponse.json();
+
+          // Handle conversion API response (don't fail if it errors)
+          if (conversionResponse.ok) {
+            weeklyConversionData = await conversionResponse.json();
+          } else {
+            console.error(
+              "Weekly conversion API failed:",
+              conversionResponse.status,
+            );
+          }
+
+          updateFunnelSnapshotDashboard(funnelSnapshotData);
+        } catch (error) {
+          console.error("Error loading funnel snapshot data:", error);
+          document.getElementById("loading").innerHTML =
+            '<div style="color: red; text-align: center;">Error loading data. Please try again.</div>';
+        }
+      }
+
+      // Update weekly conversion card
+      function updateWeeklyConversionCard(data) {
+        if (!data || !data.signupToPaidConversion) return;
+
+        const conversion = data.signupToPaidConversion;
+
+        // Update 7-day conversion
+        document.getElementById("conversion-7day-rate").textContent =
+          conversion.conversion7DayRate.toFixed(1) + "%";
+        document.getElementById("conversion-7day-paid").textContent =
+          conversion.paidWithin7Days;
+        document.getElementById("conversion-7day-total").textContent =
+          conversion.totalEnrolled;
+
+        // Update 14-day conversion
+        document.getElementById("conversion-14day-rate").textContent =
+          conversion.conversion14DayRate.toFixed(1) + "%";
+        document.getElementById("conversion-14day-paid").textContent =
+          conversion.paidWithin14Days;
+        document.getElementById("conversion-14day-total").textContent =
+          conversion.totalEnrolled;
+      }
+
+      // Update monthly churn card
+      function updateMonthlyChurnCard(data) {
+        if (!data || !data.monthlyChurnRate) return;
+
+        const churn = data.monthlyChurnRate;
+        document.getElementById("monthly-churn-rate").textContent =
+          churn.churnRate.toFixed(1) + "%";
+        document.getElementById("monthly-churn-details").innerHTML =
+          `${churn.cancellationsLast30Days} cancellations from ${churn.activeClientsAtStart.toLocaleString()} active clients`;
+      }
+
+      // Update monthly retention cards
+      function updateMonthlyRetentionCard(data) {
+        if (!data || !data.monthlyRetention) return;
+
+        const retention = data.monthlyRetention;
+
+        if (retention.month2) {
+          document.getElementById("month2-retention-rate").textContent =
+            retention.month2.retentionRate.toFixed(1) + "%";
+          document.getElementById("month2-retention-details").innerHTML =
+            `${retention.month2.stillActive} of ${retention.month2.enrolled} still active`;
+        }
+
+        if (retention.month3) {
+          document.getElementById("month3-retention-rate").textContent =
+            retention.month3.retentionRate.toFixed(1) + "%";
+          document.getElementById("month3-retention-details").innerHTML =
+            `${retention.month3.stillActive} of ${retention.month3.enrolled} still active`;
+        }
+      }
+
+      // Update cohort retention table
+      function updateCohortRetentionTable(data) {
+        if (!data || !data.cohorts) return;
+
+        const tbody = document.getElementById("cohort-retention-tbody");
+        tbody.innerHTML = "";
+
+        data.cohorts.forEach((cohort) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${cohort.signupMonth}</td>
+            <td>${cohort.totalSignups}</td>
+            <td>${cohort.m1 ? cohort.m1 + "%" : "-"}</td>
+            <td>${cohort.m2 ? cohort.m2 + "%" : "-"}</td>
+            <td>${cohort.m3 ? cohort.m3 + "%" : "-"}</td>
+            <td>${cohort.m4 ? cohort.m4 + "%" : "-"}</td>
+            <td>${cohort.m5 ? cohort.m5 + "%" : "-"}</td>
+            <td>${cohort.m6 ? cohort.m6 + "%" : "-"}</td>
+            <td>${cohort.activePercent}%</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Update weekly net growth table
+      function updateWeeklyNetGrowthTable(data) {
+        if (!data || !data.weeks || !data.summary) return;
+
+        // Update summary cards
+        const totalGrowth = data.summary.totalGrowth;
+        const avgGrowth = data.summary.avgGrowth;
+
+        document.getElementById("total-growth").textContent = totalGrowth;
+        document.getElementById("avg-growth").textContent =
+          avgGrowth.toFixed(1);
+
+        // Apply color classes based on growth
+        const totalGrowthEl = document.getElementById("total-growth");
+        const avgGrowthEl = document.getElementById("avg-growth");
+
+        totalGrowthEl.className =
+          totalGrowth > 0
+            ? "card-value positive-growth"
+            : totalGrowth < 0
+              ? "card-value negative-growth"
+              : "card-value neutral-growth";
+        avgGrowthEl.className =
+          avgGrowth > 0
+            ? "card-value positive-growth"
+            : avgGrowth < 0
+              ? "card-value negative-growth"
+              : "card-value neutral-growth";
+
+        // Update table
+        const tbody = document.getElementById("weekly-growth-tbody");
+        tbody.innerHTML = "";
+
+        data.weeks.forEach((week) => {
+          const row = document.createElement("tr");
+          const netGrowthClass =
+            week.netGrowth > 0
+              ? "positive-growth"
+              : week.netGrowth < 0
+                ? "negative-growth"
+                : "neutral-growth";
+
+          row.innerHTML = `
+            <td>${week.week}</td>
+            <td>${week.newCustomers}</td>
+            <td>${week.lostCustomers}</td>
+            <td class="${netGrowthClass}">${week.netGrowth}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Load alerts data (priority loading)
+      async function loadAlertsData() {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/alerts`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          alertsData = await response.json();
+          updateAlertsBanner(alertsData);
+        } catch (error) {
+          console.error("Error loading alerts data:", error);
+          // Hide banner on error
+          document.getElementById("alert-banner").style.display = "none";
+        }
+      }
+
+      // Update alerts metrics
+      function updateAlertsBanner(data) {
+        const alertMetrics = document.getElementById("alert-metrics");
+
+        if (!data || !data.metrics) {
+          alertMetrics.style.display = "none";
+          return;
+        }
+
+        alertMetrics.style.display = "flex";
+
+        // Update Show Rate
+        const showRateCard = document.getElementById("alert-show-rate");
+        const showRateValue = document.getElementById("alert-show-rate-value");
+        if (data.metrics.showRate.isAlert) {
+          showRateValue.textContent =
+            data.metrics.showRate.value.toFixed(1) + "%";
+          showRateCard.classList.add("alert-red");
+          showRateCard.classList.remove("alert-green");
+        } else {
+          showRateValue.textContent =
+            data.metrics.showRate.value.toFixed(1) + "%";
+          showRateCard.classList.add("alert-green");
+          showRateCard.classList.remove("alert-red");
+        }
+
+        // Update ARPU
+        const arpuCard = document.getElementById("alert-arpu");
+        const arpuValue = document.getElementById("alert-arpu-value");
+        if (data.metrics.arpu.isAlert) {
+          arpuValue.textContent =
+            "-" + data.metrics.arpu.declinePercent.toFixed(1) + "%";
+          arpuCard.classList.add("alert-red");
+          arpuCard.classList.remove("alert-green");
+        } else {
+          const change = data.metrics.arpu.declinePercent;
+          arpuValue.textContent =
+            (change > 0 ? "-" : "+") + Math.abs(change).toFixed(1) + "%";
+          arpuCard.classList.add("alert-green");
+          arpuCard.classList.remove("alert-red");
+        }
+
+        // Update Revenue
+        const revenueCard = document.getElementById("alert-revenue");
+        const revenueValue = document.getElementById("alert-revenue-value");
+        if (data.metrics.revenue.isAlert) {
+          revenueValue.textContent =
+            "-" + data.metrics.revenue.declinePercent.toFixed(1) + "%";
+          revenueCard.classList.add("alert-red");
+          revenueCard.classList.remove("alert-green");
+        } else {
+          const change = data.metrics.revenue.declinePercent;
+          revenueValue.textContent =
+            (change > 0 ? "-" : "+") + Math.abs(change).toFixed(1) + "%";
+          revenueCard.classList.add("alert-green");
+          revenueCard.classList.remove("alert-red");
+        }
+
+        // Update No-Show Loss
+        const noshowCard = document.getElementById("alert-noshow");
+        const noshowValue = document.getElementById("alert-noshow-value");
+        if (data.metrics.noshowLoss.isAlert) {
+          noshowValue.textContent =
+            "$" + data.metrics.noshowLoss.value.toLocaleString();
+          noshowCard.classList.add("alert-red");
+          noshowCard.classList.remove("alert-green");
+        } else {
+          noshowValue.textContent =
+            "$" + data.metrics.noshowLoss.value.toLocaleString();
+          noshowCard.classList.add("alert-green");
+          noshowCard.classList.remove("alert-red");
+        }
+
+        console.log("Alerts loaded:", {
+          totalAlerts: data.summary.totalAlerts,
+          highSeverity: data.summary.highSeverity,
+          alerts: data.alerts,
+          metrics: data.metrics,
+        });
+      }
+      async function loadClientBaseHealthData() {
+        try {
+          document.getElementById("loading").style.display = "flex";
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/client-base-health`,
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          clientBaseHealthData = await response.json();
+          updateClientBaseHealthDashboard(clientBaseHealthData);
+
+          // Load additional client health APIs in background
+          loadAdditionalClientHealthData();
+        } catch (error) {
+          console.error("Error loading client base health data:", error);
+          document.getElementById("loading").innerHTML =
+            '<div style="color: red; text-align: center;">Error loading data. Please try again.</div>';
+        }
+      }
+
+      // Load additional client health APIs
+      async function loadAdditionalClientHealthData() {
+        try {
+          const [
+            churnResponse,
+            retentionResponse,
+            cohortResponse,
+            growthResponse,
+          ] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/monthly-churn-rate`),
+            fetch(`${API_BASE_URL}/api/monthly-retention`),
+            fetch(`${API_BASE_URL}/api/cohort-retention`),
+            fetch(`${API_BASE_URL}/api/weekly-net-growth`),
+          ]);
+
+          if (churnResponse.ok) {
+            monthlyChurnData = await churnResponse.json();
+            updateMonthlyChurnCard(monthlyChurnData);
+          }
+
+          if (retentionResponse.ok) {
+            monthlyRetentionData = await retentionResponse.json();
+            updateMonthlyRetentionCard(monthlyRetentionData);
+          }
+
+          if (cohortResponse.ok) {
+            cohortRetentionData = await cohortResponse.json();
+            updateCohortRetentionTable(cohortRetentionData);
+          }
+
+          if (growthResponse.ok) {
+            weeklyNetGrowthData = await growthResponse.json();
+            updateWeeklyNetGrowthTable(weeklyNetGrowthData);
+          }
+        } catch (error) {
+          console.error("Error loading additional client health data:", error);
+        }
+      }
+
+      // Load form submissions data
+      async function loadFormSubmissionsData() {
+        try {
+          document.getElementById("loading").style.display = "flex";
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/form-submissions-funnel`,
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          formSubmissionsData = await response.json();
+          updateFormSubmissionsDashboard(formSubmissionsData);
+        } catch (error) {
+          console.error("Error loading form submissions data:", error);
+          document.getElementById("loading").innerHTML =
+            '<div style="color: red; text-align: center;">Error loading data. Please try again.</div>';
+        }
+      }
+
+      // Update form submissions dashboard
+      function updateFormSubmissionsDashboard(data) {
+        if (!data) return;
+
+        // Update summary cards
+        document.getElementById("total-submissions-count").textContent =
+          data.summary.totalSubmissions.toLocaleString();
+        document.getElementById("total-contacts-count").textContent =
+          data.summary.totalContacts.toLocaleString();
+        document.getElementById("total-form-booked-count").textContent =
+          data.summary.totalBooked.toLocaleString();
+        document.getElementById("total-form-showed-count").textContent =
+          data.summary.totalShowed.toLocaleString();
+        document.getElementById("overall-form-conversion").textContent =
+          data.summary.overallConversion + "%";
+
+        // Update table
+        updateFormSubmissionsTable(data.formSubmissionsBySource);
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("form-submissions-header").style.display =
+          "flex";
+        document.getElementById("form-submissions-summary").style.display =
+          "grid";
+        document.getElementById(
+          "form-submissions-table-container",
+        ).style.display = "block";
+      }
+
+      // Update form submissions table based on selected top sources
+      function updateFormSubmissionsTable(sources) {
+        const tbody = document.getElementById("form-submissions-tbody");
+        tbody.innerHTML = "";
+
+        let displaySources = sources;
+        if (currentFormTopSources !== "all") {
+          displaySources = sources.slice(0, parseInt(currentFormTopSources));
+        }
+
+        displaySources.forEach((source) => {
+          const row = document.createElement("tr");
+
+          // Calculate conversion rate (contacts/submissions)
+          const conversionRate =
+            source.submissions > 0
+              ? ((source.contacts / source.submissions) * 100).toFixed(1)
+              : "0.0";
+
+          // Determine conversion rate color class
+          let conversionRateClass = "show-rate-low";
+          if (parseFloat(conversionRate) >= 80)
+            conversionRateClass = "show-rate-high";
+          else if (parseFloat(conversionRate) >= 60)
+            conversionRateClass = "show-rate-medium";
+
+          // Calculate show rate
+          const showRate =
+            source.booked > 0
+              ? ((source.showed / source.booked) * 100).toFixed(1)
+              : "0.0";
+
+          // Determine show rate color class
+          let showRateClass = "show-rate-low";
+          if (parseFloat(showRate) >= 50) showRateClass = "show-rate-high";
+          else if (parseFloat(showRate) >= 30)
+            showRateClass = "show-rate-medium";
+
+          row.innerHTML = `
+            <td class="source-name">${source.formSource}</td>
+            <td>${source.submissions.toLocaleString()}</td>
+            <td>${source.contacts.toLocaleString()}</td>
+            <td class="show-rate-value ${conversionRateClass}">${conversionRate}%</td>
+            <td>${source.booked.toLocaleString()}</td>
+            <td>${source.showed.toLocaleString()}</td>
+            <td class="show-rate-value ${showRateClass}">${showRate}%</td>
+            <td style="color: #dc3545; font-weight: 600;">${source.noShow || 0}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Load form submissions data
+      async function loadFormSubmissionsData() {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/form-submissions-funnel`,
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          formSubmissionsData = await response.json();
+          updateFormSubmissionsSection(formSubmissionsData);
+        } catch (error) {
+          console.error("Error loading form submissions data:", error);
+        }
+      }
+
+      // Update form submissions section
+      function updateFormSubmissionsSection(data) {
+        if (!data) return;
+
+        const tbody = document.getElementById("form-submissions-section-tbody");
+        tbody.innerHTML = "";
+
+        data.formSubmissionsBySource.forEach((form) => {
+          const row = document.createElement("tr");
+
+          // Determine show rate color class
+          let showRateClass = "show-rate-low";
+          if (form.showRate >= 50) showRateClass = "show-rate-high";
+          else if (form.showRate >= 30) showRateClass = "show-rate-medium";
+
+          // Determine no show rate color class
+          let noShowRateClass = "show-rate-low";
+          if (form.noShowRate <= 30) noShowRateClass = "show-rate-high";
+          else if (form.noShowRate <= 50) noShowRateClass = "show-rate-medium";
+
+          row.innerHTML = `
+            <td class="source-name">${form.formName}</td>
+            <td>${form.submissions.toLocaleString()}</td>
+            <td>${form.bookedPersonal.toLocaleString()}</td>
+            <td>${form.bookedBusiness.toLocaleString()}</td>
+            <td>${form.showedPersonal.toLocaleString()}</td>
+            <td>${form.showedBusiness.toLocaleString()}</td>
+            <td class="show-rate-value ${showRateClass}">${form.showRate}%</td>
+            <td style="color: #dc3545; font-weight: 600;">${form.mishapsPersonal}</td>
+            <td style="color: #dc3545; font-weight: 600;">${form.mishapsBusiness}</td>
+            <td class="show-rate-value ${noShowRateClass}">${form.noShowRate}%</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Add summary row
+        const summaryRow = document.createElement("tr");
+        summaryRow.style.backgroundColor = "#e8f5e8";
+        summaryRow.style.fontWeight = "bold";
+        summaryRow.style.borderTop = "3px solid #4caf50";
+        summaryRow.style.color = "#000000"; // Ensure black text for visibility
+
+        const overallShowRateClass =
+          data.summary.overallShowRate >= 50
+            ? "show-rate-high"
+            : data.summary.overallShowRate >= 30
+              ? "show-rate-medium"
+              : "show-rate-low";
+        const overallNoShowRateClass =
+          data.summary.overallNoShowRate <= 30
+            ? "show-rate-high"
+            : data.summary.overallNoShowRate <= 50
+              ? "show-rate-medium"
+              : "show-rate-low";
+
+        summaryRow.innerHTML = `
+          <td style="color: #000000;"><strong>TOTAL SUMMARY</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalSubmissions.toLocaleString()}</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalBookedPersonal.toLocaleString()}</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalBookedBusiness.toLocaleString()}</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalShowedPersonal.toLocaleString()}</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalShowedBusiness.toLocaleString()}</strong></td>
+          <td class="show-rate-value ${overallShowRateClass}" style="color: #000000;"><strong>${data.summary.overallShowRate}%</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalMishapsPersonal.toLocaleString()}</strong></td>
+          <td style="color: #000000;"><strong>${data.summary.totalMishapsBusiness.toLocaleString()}</strong></td>
+          <td class="show-rate-value ${overallNoShowRateClass}" style="color: #000000;"><strong>${data.summary.overallNoShowRate}%</strong></td>
+        `;
+        tbody.appendChild(summaryRow);
+
+        document.getElementById(
+          "form-submissions-section-header",
+        ).style.display = "block";
+        document.getElementById(
+          "form-submissions-section-container",
+        ).style.display = "block";
+      }
+
+      // Load show rate data
+      async function loadShowRateData() {
+        try {
+          document.getElementById("loading").style.display = "flex";
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/show-rate-by-source`,
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          showRateData = await response.json();
+          updateShowRateDashboard(showRateData);
+        } catch (error) {
+          console.error("Error loading show rate data:", error);
+          document.getElementById("loading").innerHTML =
+            '<div style="color: red; text-align: center;">Error loading data. Please try again.</div>';
+        }
+      }
+
+      // Update show rate dashboard
+      function updateShowRateDashboard(data) {
+        if (!data) return;
+
+        // Update summary cards
+        document.getElementById("total-booked-count").textContent =
+          data.summary.totalBooked.toLocaleString();
+        document.getElementById("total-showed-count").textContent =
+          data.summary.totalShowed.toLocaleString();
+        document.getElementById("total-mishaps-count").textContent = (
+          data.summary.totalMishaps || 0
+        ).toLocaleString();
+        document.getElementById("overall-show-rate").textContent =
+          data.summary.overallShowRate + "%";
+
+        // Update table
+        updateShowRateTable(data.showRateBySource, data.manualBooking);
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("show-rate-header").style.display = "flex";
+        document.getElementById("show-rate-summary").style.display = "grid";
+        document.getElementById("show-rate-table-container").style.display =
+          "block";
+
+        // Show form submissions section with skeleton while loading
+        document.getElementById(
+          "form-submissions-section-header",
+        ).style.display = "block";
+        document.getElementById(
+          "form-submissions-section-container",
+        ).style.display = "block";
+
+        // Load form submissions data for this tab
+        if (!formSubmissionsData) {
+          loadFormSubmissionsData();
+        } else {
+          updateFormSubmissionsSection(formSubmissionsData);
+        }
+      }
+
+      // Update show rate table based on selected top sources
+      function updateShowRateTable(sources, manualBooking) {
+        const tbody = document.getElementById("show-rate-tbody");
+        tbody.innerHTML = "";
+
+        // Add manual booking row at the top with special styling
+        if (manualBooking) {
+          const manualRow = document.createElement("tr");
+          const showRateClass =
+            manualBooking.showRate >= 50
+              ? "show-rate-high"
+              : manualBooking.showRate >= 30
+                ? "show-rate-medium"
+                : "show-rate-low";
+          const noShowRate =
+            manualBooking.booked > 0
+              ? ((manualBooking.mishaps / manualBooking.booked) * 100).toFixed(
+                  1,
+                )
+              : "0.0";
+          const noShowRateClass =
+            parseFloat(noShowRate) <= 30
+              ? "show-rate-high"
+              : parseFloat(noShowRate) <= 50
+                ? "show-rate-medium"
+                : "show-rate-low";
+
+          manualRow.style.backgroundColor = "#fff3cd";
+          manualRow.style.border = "2px solid #ffc107";
+          manualRow.style.fontWeight = "bold";
+
+          manualRow.innerHTML = `
+            <td class="source-name" style="color: #856404;">${manualBooking.medium}</td>
+            <td style="color: #000000;">${manualBooking.booked.toLocaleString()}</td>
+            <td style="color: #000000;">${manualBooking.showed.toLocaleString()}</td>
+            <td class="show-rate-value ${showRateClass}" style="color: #000000;">${manualBooking.showRate}%</td>
+            <td style="color: #dc3545; font-weight: 600;">${manualBooking.mishaps}</td>
+            <td class="show-rate-value ${noShowRateClass}" style="color: #000000;">${noShowRate}%</td>
+          `;
+          tbody.appendChild(manualRow);
+        }
+
+        let displaySources = sources;
+        if (currentTopSources !== "all") {
+          displaySources = sources.slice(0, parseInt(currentTopSources));
+        }
+
+        displaySources.forEach((source) => {
+          const row = document.createElement("tr");
+
+          // Determine show rate color class
+          let showRateClass = "show-rate-low";
+          if (source.showRate >= 50) showRateClass = "show-rate-high";
+          else if (source.showRate >= 30) showRateClass = "show-rate-medium";
+
+          // Calculate no show rate
+          const noShowRate =
+            source.booked > 0
+              ? ((source.mishaps / source.booked) * 100).toFixed(1)
+              : "0.0";
+          let noShowRateClass = "show-rate-low";
+          if (parseFloat(noShowRate) <= 30) noShowRateClass = "show-rate-high";
+          else if (parseFloat(noShowRate) <= 50)
+            noShowRateClass = "show-rate-medium";
+
+          row.innerHTML = `
+            <td class="source-name">${source.medium}</td>
+            <td>${source.booked.toLocaleString()}</td>
+            <td>${source.showed.toLocaleString()}</td>
+            <td class="show-rate-value ${showRateClass}">${source.showRate}%</td>
+            <td style="color: #dc3545; font-weight: 600;">${source.mishaps || 0}</td>
+            <td class="show-rate-value ${noShowRateClass}">${noShowRate}%</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Update gross revenue dashboard
+      function updateGrossRevenueDashboard(data) {
+        document.getElementById("new-revenue").textContent =
+          "$" +
+          data.newRevenue.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          });
+
+        document.getElementById("existing-revenue").textContent =
+          "$" +
+          data.existingRevenue.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          });
+
+        document.getElementById("recovery-revenue").textContent =
+          "$" +
+          data.recoveryRevenue.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          });
+
+        document.getElementById("total-net-revenue").textContent =
+          "$" +
+          data.totalNetRevenue.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+
+        document.getElementById("revenue-per-client").textContent =
+          "$" +
+          data.revenuePerClient.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+
+        updateRevenueChart(data);
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("card-header").style.display = "flex";
+        document.getElementById("metric-tabs").style.display = "flex";
+        document.getElementById("chart-container").style.display = "block";
+        document.getElementById("dashboard-cards-2").style.display = "grid";
+
+        // Show effective lifetime card with skeleton values
+        document.getElementById("effective-lifetime-card").style.display =
+          "block";
+      }
+
+      // Update revenue chart
+      function updateRevenueChart(data) {
+        const ctx = document.getElementById("revenueChart").getContext("2d");
+
+        if (revenueChart) {
+          revenueChart.destroy();
+        }
+
+        revenueChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["New Enrollments", "Existing Clients", "Recovery Revenue"],
+            datasets: [
+              {
+                data: [
+                  data.newRevenue,
+                  data.existingRevenue,
+                  data.recoveryRevenue,
+                ],
+                backgroundColor: [
+                  "rgba(16, 185, 129, 0.8)",
+                  "rgba(59, 130, 246, 0.8)",
+                  "rgba(245, 158, 11, 0.8)",
+                ],
+                borderColor: [
+                  "rgba(16, 185, 129, 1)",
+                  "rgba(59, 130, 246, 1)",
+                  "rgba(245, 158, 11, 1)",
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                backgroundColor: "rgba(0, 0, 0, 0.9)",
+                titleColor: "white",
+                bodyColor: "white",
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                borderWidth: 1,
+                cornerRadius: 8,
+                displayColors: false,
+                callbacks: {
+                  label: function (context) {
+                    return "$" + context.parsed.y.toLocaleString("en-US");
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: "rgba(255, 255, 255, 0.05)",
+                  drawBorder: false,
+                },
+                ticks: {
+                  color: "#9ca3af",
+                  font: {
+                    size: 12,
+                  },
+                  maxTicksLimit: 6,
+                  callback: function (value) {
+                    if (value >= 1000000) {
+                      return "$" + (value / 1000000).toFixed(1) + "M";
+                    } else if (value >= 1000) {
+                      return "$" + (value / 1000).toFixed(0) + "K";
+                    }
+                    return "$" + value.toLocaleString("en-US");
+                  },
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  color: "#9ca3af",
+                  font: {
+                    size: 12,
+                    weight: "500",
+                  },
+                },
+              },
+            },
+            layout: {
+              padding: {
+                top: 20,
+                bottom: 10,
+              },
+            },
+          },
+        });
+      }
+
+      // NEW: Update funnel flow chart
+      function updateFunnelFlowChart(data) {
+        const ctx = document.getElementById("funnelFlowChart").getContext("2d");
+
+        if (funnelFlowChart) {
+          funnelFlowChart.destroy();
+        }
+
+        const leads = data.leads[timeOnlyPeriod];
+        const enrolled = data.enrolled[timeOnlyPeriod].count;
+        const paid = data.paid[timeOnlyPeriod].count;
+        const cancelled = data.preBillingCancellations[timeOnlyPeriod].count;
+
+        funnelFlowChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Leads", "Enrolled", "Paid", "Cancelled"],
+            datasets: [
+              {
+                label: "Funnel Flow",
+                data: [leads, enrolled, paid, cancelled],
+                backgroundColor: [
+                  "rgba(16, 185, 129, 0.8)",
+                  "rgba(245, 158, 11, 0.8)",
+                  "rgba(16, 185, 129, 0.8)",
+                  "rgba(239, 68, 68, 0.8)",
+                ],
+                borderColor: [
+                  "rgba(16, 185, 129, 1)",
+                  "rgba(245, 158, 11, 1)",
+                  "rgba(16, 185, 129, 1)",
+                  "rgba(239, 68, 68, 1)",
+                ],
+                borderWidth: 2,
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                backgroundColor: "rgba(0, 0, 0, 0.9)",
+                callbacks: {
+                  label: function (context) {
+                    return context.parsed.x + " people";
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: {
+                  color: "rgba(255, 255, 255, 0.05)",
+                },
+                ticks: {
+                  color: "#9ca3af",
+                },
+              },
+              y: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  color: "#9ca3af",
+                  font: {
+                    weight: "500",
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // NEW: Update appointment funnel charts (PIE CHARTS)
+      function updateAppointmentFunnelChart(
+        canvasId,
+        booked,
+        showed,
+        mishaps,
+        chartInstance,
+      ) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        const newChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["Showed", "No Show/Cancel"],
+            datasets: [
+              {
+                data: [showed, mishaps],
+                backgroundColor: [
+                  "rgba(16, 185, 129, 0.8)",
+                  "rgba(239, 68, 68, 0.8)",
+                ],
+                borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: "bottom",
+                labels: {
+                  color: "#9ca3af",
+                  font: {
+                    size: 12,
+                  },
+                  padding: 20,
+                },
+              },
+              tooltip: {
+                backgroundColor: "rgba(0, 0, 0, 0.9)",
+                titleColor: "white",
+                bodyColor: "white",
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.label + ": " + context.parsed + " appointments"
+                    );
+                  },
+                },
+              },
+            },
+            cutout: "60%",
+          },
+        });
+
+        return newChart;
+      }
+
+      // Update funnel snapshot dashboard
+      function updateFunnelSnapshotDashboard(data) {
+        document.getElementById("loading").style.display = "none";
+
+        // Show all sections
+        document.getElementById("time-only-header").style.display = "flex";
+        document.getElementById("time-only-metrics").style.display = "grid";
+        document.getElementById("funnel-flow-viz").style.display = "block";
+        document.getElementById("split-conversion-card").style.display =
+          "block";
+        document.getElementById("risk-section-header").style.display = "block";
+        document.getElementById("split-risk-card").style.display = "flex";
+        document.getElementById("dual-filter-header").style.display = "flex";
+        document.getElementById("funnel-tabs").style.display = "block";
+        document.getElementById("personal-viz").style.display = "block";
+        document.getElementById("business-viz").style.display = "block";
+
+        // Update sections using their respective periods
+        updateTimeOnlySection(data);
+        updateAppointmentSection(data);
+
+        // Update conversion card if data is available
+        if (weeklyConversionData) {
+          updateWeeklyConversionCard(weeklyConversionData);
+        }
+
+        // Update split risk card (not affected by time filters)
+        document.getElementById("split-failed-count").textContent =
+          data.revenueAtRisk.breakdown.failedPayments.count;
+        document.getElementById("split-failed-amount").textContent =
+          "$" +
+          data.revenueAtRisk.breakdown.failedPayments.mrr.toLocaleString(
+            "en-US",
+            { maximumFractionDigits: 0 },
+          );
+        document.getElementById("split-trials-count").textContent =
+          data.revenueAtRisk.breakdown.trialsEnding.count;
+        document.getElementById("split-trials-amount").textContent =
+          "$" +
+          data.revenueAtRisk.breakdown.trialsEnding.mrr.toLocaleString(
+            "en-US",
+            { maximumFractionDigits: 0 },
+          );
+
+        // Make split card dynamic based on amounts
+        const failedMRR = data.revenueAtRisk.breakdown.failedPayments.mrr;
+        const trialsMRR = data.revenueAtRisk.breakdown.trialsEnding.mrr;
+        const total = failedMRR + trialsMRR;
+
+        if (total > 0) {
+          const failedPercent = (failedMRR / total) * 100;
+          const trialsPercent = (trialsMRR / total) * 100;
+
+          document.querySelector(".risk-half-left").style.flex =
+            `${failedPercent}`;
+          document.querySelector(".risk-half-right").style.flex =
+            `${trialsPercent}`;
+        }
+      }
+
+      // Update client base health dashboard
+      function updateClientBaseHealthDashboard(data) {
+        document.getElementById("active-clients-count").textContent =
+          data.activeClients[currentPeriod];
+        document.getElementById("net-client-growth").textContent =
+          data.netClientGrowth[currentPeriod];
+
+        document.getElementById("retention-rate").textContent =
+          data.retentionRate.toFixed(1) + "%";
+        document.getElementById("ninety-day-projection").textContent =
+          "$" +
+          data.ninetyDayProjection.toLocaleString("en-US", {
+            maximumFractionDigits: 0,
+          });
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("client-health-header").style.display = "flex";
+        document.getElementById("client-health-filtered").style.display =
+          "grid";
+        document.getElementById("client-health-static").style.display = "grid";
+
+        // Show additional client health sections with skeleton loading
+        document.getElementById("additional-client-health").style.display =
+          "block";
+      }
+
+      // Funnel personal/business tab switching
+      document.querySelectorAll(".tab-btn[data-funnel-tab]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const funnelTab = btn.dataset.funnelTab;
+
+          document
+            .querySelectorAll(".tab-btn[data-funnel-tab]")
+            .forEach((b) => {
+              b.classList.remove("active");
+            });
+          btn.classList.add("active");
+
+          document
+            .querySelectorAll(".funnel-tab-content")
+            .forEach((content) => {
+              content.classList.remove("active");
+            });
+          document
+            .getElementById(`${funnelTab}-content`)
+            .classList.add("active");
+        });
+      });
+
+      // Reset to daily when switching main tabs
+      function switchTab(tabName) {
+        document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        document
+          .querySelector(`[data-tab="${tabName}"]`)
+          .classList.add("active");
+
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.remove("active");
+        });
+        document.getElementById(`${tabName}-tab`).classList.add("active");
+
+        currentTab = tabName;
+
+        // Update period button highlights based on current period
+        if (tabName === "gross-revenue" || tabName === "client-base-health") {
+          document
+            .querySelectorAll("#" + tabName + "-tab .period-btn")
+            .forEach((btn) => {
+              btn.classList.remove("active");
+              if (btn.dataset.period === currentPeriod) {
+                btn.classList.add("active");
+              }
+            });
+        } else if (tabName === "funnel-snapshot") {
+          // Update time-only section buttons
+          document
+            .querySelectorAll("#time-only-header .period-btn")
+            .forEach((btn) => {
+              btn.classList.remove("active");
+              if (btn.dataset.period === timeOnlyPeriod) {
+                btn.classList.add("active");
+              }
+            });
+          // Update appointment section buttons
+          document
+            .querySelectorAll("#dual-filter-header .period-btn")
+            .forEach((btn) => {
+              btn.classList.remove("active");
+              if (btn.dataset.period === appointmentPeriod) {
+                btn.classList.add("active");
+              }
+            });
+        }
+
+        if (tabName === "gross-revenue" && !grossRevenueData) {
+          loadGrossRevenueData();
+        } else if (tabName === "funnel-snapshot" && !funnelSnapshotData) {
+          loadFunnelSnapshotData();
+        } else if (tabName === "client-base-health" && !clientBaseHealthData) {
+          loadClientBaseHealthData();
+        } else if (tabName === "show-rate" && !showRateData) {
+          loadShowRateData();
+        } else if (tabName === "gross-revenue" && grossRevenueData) {
+          updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
+        } else if (tabName === "funnel-snapshot" && funnelSnapshotData) {
+          updateFunnelSnapshotDashboard(funnelSnapshotData);
+        } else if (tabName === "client-base-health" && clientBaseHealthData) {
+          updateClientBaseHealthDashboard(clientBaseHealthData);
+        } else if (tabName === "show-rate" && showRateData) {
+          updateShowRateDashboard(showRateData);
+        }
+      }
+
+      // Update period handlers - separate for each section
+      document.addEventListener("DOMContentLoaded", function () {
+        // Time-only section period buttons
+        document
+          .getElementById("time-only-header")
+          .addEventListener("click", function (e) {
+            if (e.target.classList.contains("period-btn")) {
+              // Update active state for time-only section
+              e.target.parentElement
+                .querySelectorAll(".period-btn")
+                .forEach((btn) => btn.classList.remove("active"));
+              e.target.classList.add("active");
+              timeOnlyPeriod = e.target.dataset.period;
+
+              if (currentTab === "funnel-snapshot" && funnelSnapshotData) {
+                updateTimeOnlySection(funnelSnapshotData);
+              }
+            }
+          });
+
+        // Appointment section period buttons
+        document
+          .getElementById("dual-filter-header")
+          .addEventListener("click", function (e) {
+            if (e.target.classList.contains("period-btn")) {
+              // Update active state for appointment section
+              e.target.parentElement
+                .querySelectorAll(".period-btn")
+                .forEach((btn) => btn.classList.remove("active"));
+              e.target.classList.add("active");
+              appointmentPeriod = e.target.dataset.period;
+
+              if (currentTab === "funnel-snapshot" && funnelSnapshotData) {
+                updateAppointmentSection(funnelSnapshotData);
+              }
+            }
+          });
+      });
+
+      // Update only time-based section
+      function updateTimeOnlySection(data) {
+        document.getElementById("total-leads").textContent =
+          data.leads[timeOnlyPeriod];
+        document.getElementById("enrolled-count-funnel").textContent =
+          data.enrolled[timeOnlyPeriod].count;
+        document.getElementById("enrolled-revenue-funnel").textContent =
+          "$" + data.enrolled[timeOnlyPeriod].revenue.toFixed(0);
+        document.getElementById("paid-count-funnel").textContent =
+          data.paid[timeOnlyPeriod].count;
+        document.getElementById("paid-revenue-funnel").textContent =
+          "$" + data.paid[timeOnlyPeriod].revenue.toFixed(0);
+        document.getElementById("pre-billing-count").textContent =
+          data.preBillingCancellations[timeOnlyPeriod].count;
+        document.getElementById("pre-billing-amount").textContent =
+          "$" +
+          data.preBillingCancellations[timeOnlyPeriod].amount.toLocaleString(
+            "en-US",
+            { maximumFractionDigits: 0 },
+          );
+
+        // Calculate Close Rate % (Enrolled ÷ Total Showed)
+        const totalShowed =
+          data.showed.personal[timeOnlyPeriod] +
+          data.showed.business[timeOnlyPeriod];
+        const enrolled = data.enrolled[timeOnlyPeriod].count;
+
+        // Debug logging
+        console.log("Close Rate Debug:", {
+          period: timeOnlyPeriod,
+          personalShowed: data.showed.personal[timeOnlyPeriod],
+          businessShowed: data.showed.business[timeOnlyPeriod],
+          totalShowed: totalShowed,
+          enrolled: enrolled,
+          showedData: data.showed,
+          enrolledData: data.enrolled,
+        });
+
+        const closeRate =
+          totalShowed > 0
+            ? Math.min((enrolled / totalShowed) * 100, 100).toFixed(1)
+            : 0;
+        document.getElementById("close-rate-percentage").textContent =
+          closeRate + "%";
+
+        updateFunnelFlowChart(data);
+      }
+
+      // Update only appointment section
+      function updateAppointmentSection(data) {
+        document.getElementById("personal-booked").textContent =
+          data.booked.personal[appointmentPeriod];
+        document.getElementById("personal-showed").textContent =
+          data.showed.personal[appointmentPeriod];
+        document.getElementById("personal-mishaps-count").textContent =
+          data.mishaps.personal[appointmentPeriod].count;
+        document.getElementById("personal-mishaps-amount").textContent =
+          "$" + data.mishaps.personal[appointmentPeriod].amount.toFixed(0);
+
+        document.getElementById("business-booked").textContent =
+          data.booked.business[appointmentPeriod];
+        document.getElementById("business-showed").textContent =
+          data.showed.business[appointmentPeriod];
+        document.getElementById("business-mishaps-count").textContent =
+          data.mishaps.business[appointmentPeriod].count;
+        document.getElementById("business-mishaps-amount").textContent =
+          "$" + data.mishaps.business[appointmentPeriod].amount.toFixed(0);
+
+        // Calculate and display Show Rate %
+        const personalShowRate =
+          data.booked.personal[appointmentPeriod] > 0
+            ? (
+                (data.showed.personal[appointmentPeriod] /
+                  data.booked.personal[appointmentPeriod]) *
+                100
+              ).toFixed(1)
+            : 0;
+        const businessShowRate =
+          data.booked.business[appointmentPeriod] > 0
+            ? (
+                (data.showed.business[appointmentPeriod] /
+                  data.booked.business[appointmentPeriod]) *
+                100
+              ).toFixed(1)
+            : 0;
+
+        document.getElementById("personal-show-rate").textContent =
+          personalShowRate + "%";
+        document.getElementById("business-show-rate").textContent =
+          businessShowRate + "%";
+
+        personalFunnelChart = updateAppointmentFunnelChart(
+          "personalFunnelChart",
+          data.booked.personal[appointmentPeriod],
+          data.showed.personal[appointmentPeriod],
+          data.mishaps.personal[appointmentPeriod].count,
+          personalFunnelChart,
+        );
+
+        businessFunnelChart = updateAppointmentFunnelChart(
+          "businessFunnelChart",
+          data.booked.business[appointmentPeriod],
+          data.showed.business[appointmentPeriod],
+          data.mishaps.business[appointmentPeriod].count,
+          businessFunnelChart,
+        );
+      }
+
+      // Update period handlers
+      document.querySelectorAll(".period-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          // Only handle non-funnel period buttons
+          if (currentTab !== "funnel-snapshot") {
+            document
+              .querySelectorAll(".period-btn")
+              .forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentPeriod = btn.dataset.period;
+
+            if (currentTab === "gross-revenue" && grossRevenueData) {
+              updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
+            } else if (
+              currentTab === "client-base-health" &&
+              clientBaseHealthData
+            ) {
+              updateClientBaseHealthDashboard(clientBaseHealthData);
+            }
+          }
+        });
+      });
+
+      // Initialize with alerts first (priority), then gross revenue tab
+      loadAlertsData();
+      loadGrossRevenueData();
+
+      // Top sources dropdown change handler
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("top-sources-select")
+          .addEventListener("change", function (e) {
+            currentTopSources = e.target.value;
+            if (showRateData) {
+              updateShowRateTable(
+                showRateData.showRateBySource,
+                showRateData.manualBooking,
+              );
+            }
+          });
+      });
+    </script>
+  </body>
+</html>

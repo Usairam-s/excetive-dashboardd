@@ -1,0 +1,9 @@
+.vercel
+backup/
+.index.html
+13feb/
+
+node_modules/
+
+.forms-viewer.html
+.show-rate-test.html
