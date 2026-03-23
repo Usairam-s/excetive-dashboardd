@@ -12,6 +12,7 @@ const cohortRetentionRoutes = require("./routes/cohortRetention");
 const weeklyNetGrowthRoutes = require("./routes/weeklyNetGrowth");
 const showRateBySourceRoutes = require("./routes/showRateBySource");
 const formSubmissionsFunnelRoutes = require("./routes/formSubmissionsFunnel");
+const cpcRoutes = require("./routes/cpc");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/gross-revenue", grossRevenueRoutes);
+app.use("/api/cpc", cpcRoutes);
 app.use("/api/funnel-snapshot", funnelSnapshotRoutes);
 app.use("/api/client-base-health", clientBaseHealthRoutes);
 app.use("/api/alerts", alertsRoutes);

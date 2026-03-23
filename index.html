@@ -2087,6 +2087,103 @@
         </div>
       </div>
 
+      <!-- CPC Section -->
+      <div
+        class="section-header"
+        id="cpc-section-header"
+        style="display: none; margin-top: 40px"
+      >
+        <h3>Cost Per Client (CPC)</h3>
+        <p>Ad spend vs customers acquired from Google Feeds</p>
+      </div>
+
+      <!-- CPC Summary Cards -->
+      <div
+        class="dashboard-cards"
+        id="cpc-summary"
+        style="
+          display: none;
+          grid-template-columns: repeat(3, 1fr);
+          margin-bottom: 32px;
+        "
+      >
+        <div class="card">
+          <div
+            class="card-icon"
+            style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+          >
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-title">Total Spend</div>
+          <div class="card-value" id="cpc-total-spend">
+            <span class="skeleton skeleton-large"></span>
+          </div>
+          <div class="card-subtitle">Total ad spend</div>
+        </div>
+
+        <div class="card">
+          <div
+            class="card-icon"
+            style="background: linear-gradient(135deg, #10b981, #059669)"
+          >
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="card-title">Total Customers Acquired</div>
+          <div class="card-value" id="cpc-total-customers">
+            <span class="skeleton skeleton-large"></span>
+          </div>
+          <div class="card-subtitle">Customers from ad spend</div>
+        </div>
+
+        <div class="card">
+          <div
+            class="card-icon"
+            style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+          >
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="card-title">Avg Cost Per Client</div>
+          <div class="card-value" id="cpc-avg-cost">
+            <span class="skeleton skeleton-large"></span>
+          </div>
+          <div class="card-subtitle">Spend ÷ Customers</div>
+        </div>
+      </div>
+
+      <!-- CPC Table -->
+      <div
+        class="table-container"
+        id="cpc-table-container"
+        style="display: none; margin: 0 20px 32px 20px"
+      >
+        <div class="table-wrapper">
+          <table class="show-rate-table" id="cpc-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Spend ($)</th>
+                <th>Customers Acquired</th>
+                <th>Cost Per Client ($)</th>
+              </tr>
+            </thead>
+            <tbody id="cpc-tbody">
+              <tr>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+              </tr>
+              <tr>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+                <td><span class="skeleton skeleton-small"></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Form Submissions Tab -->
       <div id="form-submissions-tab" class="tab-content">
         <div
@@ -2250,8 +2347,8 @@
     </div>
 
     <script>
-      // const API_BASE_URL = "http://localhost:3000";
-      const API_BASE_URL = "https://excetive-dashboard.vercel.app";
+      const API_BASE_URL = "http://localhost:3000";
+      // const API_BASE_URL = "https://excetive-dashboard.vercel.app";
 
       let currentPeriod = "daily";
       let currentTab = "gross-revenue";
@@ -2269,6 +2366,7 @@
       let weeklyNetGrowthData = null;
       let showRateData = null;
       let formSubmissionsData = null;
+      let cpcData = null;
       let currentTopSources = 3;
       let currentFormTopSources = 3;
 
@@ -2305,6 +2403,7 @@
         } else if (tabName === "show-rate") {
           showRateData = null;
           formSubmissionsData = null;
+          cpcData = null;
           loadShowRateData();
         } else if (tabName === "form-submissions") {
           formSubmissionsData = null;
@@ -2892,6 +2991,49 @@
       }
 
       // Load show rate data
+      async function loadCpcData() {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/cpc`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          cpcData = await response.json();
+          updateCpcDashboard(cpcData);
+        } catch (error) {
+          console.error("Error loading CPC data:", error);
+        }
+      }
+
+      function updateCpcDashboard(data) {
+        if (!data) return;
+
+        document.getElementById("cpc-total-spend").textContent =
+          "$" + (data.summary.totalSpend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById("cpc-total-customers").textContent =
+          (data.summary.totalCustomers || 0).toLocaleString();
+        document.getElementById("cpc-avg-cost").textContent =
+          "$" + (data.summary.averageCostPerClient || 0).toFixed(2);
+
+        const tbody = document.getElementById("cpc-tbody");
+        tbody.innerHTML = "";
+
+        if (!data.rows || data.rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#9ca3af;">No data available</td></tr>`;
+          return;
+        }
+
+        data.rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.date}</td>
+            <td>$${(row.spend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td>${(row.customers || 0).toLocaleString()}</td>
+            <td>$${(row.costPerClient || 0).toFixed(2)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
       async function loadShowRateData() {
         try {
           document.getElementById("loading").style.display = "flex";
@@ -2949,6 +3091,17 @@
           loadFormSubmissionsData();
         } else {
           updateFormSubmissionsSection(formSubmissionsData);
+        }
+
+        // Show CPC skeleton sections and load data
+        document.getElementById("cpc-section-header").style.display = "block";
+        document.getElementById("cpc-summary").style.display = "grid";
+        document.getElementById("cpc-table-container").style.display = "block";
+
+        if (!cpcData) {
+          loadCpcData();
+        } else {
+          updateCpcDashboard(cpcData);
         }
       }
 
