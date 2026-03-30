@@ -136,7 +136,9 @@ const getFormSubmissionsFunnel = async (req, res) => {
     // Filter to target forms only
     const TARGET_FORM_NAMES = [
       "Qualifying Questions/Get Credit Reports",
-      "Form to gather lead info before booking",
+      "Form to gather lead info before booking", 
+      "New Lead Schedule Form",
+      "New Lead Schedule Form - Credit Report",
     ];
     const filteredForms = allForms.filter((f) =>
       TARGET_FORM_NAMES.includes(f.name)

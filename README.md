@@ -30,7 +30,9 @@ It calculates daily/weekly/monthly slices for many metrics, and also provides st
 - **HTTP client:** Axios
 - **Frontend:** Vanilla HTML/CSS/JavaScript in one file (`index.html`)
 - **Charts:** Chart.js
-- **Deployment:** Vercel (`vercel.json` routes all traffic to `server.js`)
+- **Deployment:** Vercel (static HTML + serverless Node API, configured in `vercel.json`)
+- **Version Control:** Git + GitHub (private repo: `chargebee-project`)
+- **Date:** 23 March 2026
 
 ---
 
@@ -111,7 +113,13 @@ excetive-dashboardd/
     - test route `/onlytest` (salary webhook + sum)
 
 - **`vercel.json`**
-  - Vercel config building `server.js` via `@vercel/node` and routing all requests to it.
+  - Vercel config with dual builds:
+    - Static HTML deployment via `@vercel/static`
+    - Node.js API via `@vercel/node`
+  - Route rules:
+    - `/api/*` → `server.js` (serverless functions)
+    - `/` → `index.html` (static file serving)
+  - Enables full-stack deployment in single Vercel project
 
 ### Route files (`routes/`)
 
@@ -369,7 +377,38 @@ Base: `http://localhost:3000` (local) or deployed domain.
 
 ---
 
-## 7) Frontend Tabs and Data Wiring
+## 7) Environment Configuration & API Base URL
+
+### Auto-Detection (Frontend)
+
+The frontend (`index.html`) automatically detects the API base URL:
+
+```javascript
+const API_BASE_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:3000" 
+  : "";
+```
+
+**Behavior:**
+- **Local development:** `http://localhost:3000` (Node backend on port 3000)
+- **Vercel production:** `` (empty string — uses same domain as frontend)
+
+This eliminates manual URL updates when moving between local and production.
+
+### Deployment Environments
+
+**Local Development:**
+- Backend: `http://localhost:3000` (npm start)
+- Frontend: `http://localhost:8000` (python3 -m http.server 8000)
+- API calls: `http://localhost:3000/api/*`
+
+**Vercel Production:**
+- Frontend & Backend: `https://excetive-dashboardd.vercel.app`
+- API calls: `/api/*` (relative, same domain)
+
+---
+
+## 8) Frontend Tabs and Data Wiring
 
 `index.html` has tabbed UI sections:
 
@@ -407,7 +446,7 @@ Notes:
 
 ---
 
-## 8) External Integrations
+## 9) External Integrations
 
 ### Chargebee
 
@@ -460,7 +499,7 @@ Used for two purposes:
 
 ---
 
-## 9) Date/Timezone Behavior
+## 10) Date/Timezone Behavior
 
 Date logic is manually implemented in controllers and not centralized.
 
@@ -472,7 +511,7 @@ Because logic is duplicated across files, date adjustments require coordinated u
 
 ---
 
-## 10) Core Metric Formulas
+## 11) Core Metric Formulas
 
 - **Net Revenue** = Gross Payments − Processing Fees − Allocated Salary
 - **Revenue Per Client** = Total Net Revenue / Active Clients
@@ -485,12 +524,13 @@ Because logic is duplicated across files, date adjustments require coordinated u
 
 ---
 
-## 11) Local Development (Start to Finish)
+## 12) Local Development (Start to Finish)
 
 ### Prerequisites
 
 - Node.js 18+ recommended
 - npm
+- Python 3 (for serving static frontend locally)
 
 ### Install
 
@@ -507,42 +547,133 @@ npm start
 Server starts on:
 - `http://localhost:3000` (or `PORT` env override)
 
-### Open frontend
+### Serve Frontend Locally
 
-Options:
-- Open `index.html` directly in browser
-- Or serve static file with any local static server
-
-Make sure `API_BASE_URL` in `index.html` matches your backend URL.
-
-### Quick checks
+In a separate terminal, serve the static `index.html` file:
 
 ```bash
+python3 -m http.server 8000
+```
+
+Frontend loads at:
+- `http://localhost:8000/index.html`
+
+API calls auto-detect to `http://localhost:3000` (see section 7).
+
+### Quick Verification
+
+```bash
+# Backend health check
 curl http://localhost:3000/
+
+# Sample API endpoints
 curl http://localhost:3000/api/gross-revenue
 curl http://localhost:3000/api/funnel-snapshot
 curl http://localhost:3000/api/client-base-health
 curl http://localhost:3000/api/alerts
 curl http://localhost:3000/api/cpc
+
+# Frontend health check
+curl http://localhost:8000/index.html | head -20
 ```
 
 ---
 
-## 12) Deployment
+## 13) Deployment to Vercel
 
-Vercel is configured via `vercel.json`:
-- build target: `server.js` with `@vercel/node`
-- all routes forward to `server.js`
+### Overview
 
-High-level deploy flow:
-1. Push repo to Git provider
-2. Import project in Vercel
-3. Deploy
-4. Point frontend `API_BASE_URL` to deployed domain if needed
+The project is currently deployed to Vercel with live URL:
+- **Production:** `https://excetive-dashboardd.vercel.app`
+- **Status:** ✅ Live (as of 23 March 2026)
+
+### Vercel Configuration
+
+`vercel.json` configures both static and API deployment:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    { "src": "server.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "server.js" },
+    { "src": "/", "dest": "index.html" }
+  ]
+}
+```
+
+This allows:
+- API routes (`/api/*`) to run as Node.js serverless functions
+- Static `index.html` to serve as-is
+- Automatic fallback to frontend for client-side routing
+
+### Deploy from Local
+
+Option A: Direct Vercel CLI
+```bash
+vercel --prod --yes
+```
+
+Option B: Push to GitHub, configure Git Integration
+```bash
+git push chargebee-project main
+# Vercel auto-deploys on push (if Git Integration configured)
+```
+
+### Post-Deployment
+
+- frontend automatically detects Vercel domain and sets `API_BASE_URL = ""`
+- API calls use relative paths: `/api/endpoint-name`
+- No manual environment variable configuration needed
 
 ---
 
-## 13) Risks / Technical Debt
+## 14) Git & GitHub Repository
+
+### Repository Structure
+
+Two remotes are configured:
+
+1. **origin** (Usairam-s account)
+   - GitHub repo: https://github.com/Usairam-s/... (untouched)
+   - Status: Backup/historical
+
+2. **chargebee-project** (Shahzeb-Khn account)
+   - GitHub repo: https://github.com/Shahzeb-Khn/chargebee-project
+   - Visibility: Private
+   - Status: Active development repo (pushed 23 March 2026)
+   - All code backed up here
+
+### Git Workflow
+
+```bash
+# View configured remotes
+git remote -v
+
+# Push to chargebee-project (Shahzeb-Khn account)
+git add -A
+git commit -m "Update feature/fix description"
+git push chargebee-project main
+
+# Check remote status
+git status
+```
+
+### Git Integration with Vercel (Optional)
+
+For automatic deployments on Git push, configure Vercel → GitHub integration:
+1. Go to Vercel project dashboard
+2. Settings → Git Integration
+3. Select `chargebee-project` repo on GitHub
+4. Enable auto-deploy on main branch push
+5. Future: `git push chargebee-project main` automatically deploys
+
+---
+
+## 15) Risks / Technical Debt
 
 - Hardcoded production credentials/tokens in source (security risk)
 - Repeated API and date logic across controllers
@@ -554,7 +685,7 @@ High-level deploy flow:
 
 ---
 
-## 14) Safe Change Guidelines
+## 16) Safe Change Guidelines
 
 When editing this codebase:
 
@@ -566,7 +697,7 @@ When editing this codebase:
 
 ---
 
-## 15) Current Runtime Defaults
+## 17) Current Runtime Defaults
 
 - Backend default port: `3000`
 - Frontend API base in source: `http://localhost:3000`
@@ -574,7 +705,33 @@ When editing this codebase:
 
 ---
 
-## 16) Maintainer Notes
+## 18) Maintainer Notes & Future Work
+
+### Current State (23 March 2026)
+
+- **CPC (Cost Per Client) Feature:** ✅ Fully implemented, tested, deployed
+  - Backend: `/api/cpc` endpoint
+  - Frontend: Show Rate tab with summary cards + data table
+  - Make webhook: Array Aggregator pattern for multi-row support
+  - Live data: 4 rows (17–20 March) with correct CPC calculations
+
+- **Deployment:** ✅ Live on Vercel
+  - Static + API configuration working
+  - Auto-detecting API base URL
+  - All tabs rendering correctly
+
+- **Git Backup:** ✅ All code pushed to private `chargebee-project` repo
+
+### Next Steps (Optional)
+
+1. **Set up GitHub → Vercel Git Integration** for auto-deploy on push
+2. **Move secrets to environment variables** (currently hardcoded in controllers)
+3. **Refactor date/timezone logic** (currently duplicated across controllers)
+4. **Modularize frontend** (`index.html` is large: 1500+ lines)
+5. **Add tests** (currently none)
+6. **Add schema validation** for API responses
+
+### Architecture Notes
 
 - This repository prioritizes business visibility and fast KPI delivery.
 - It is operationally useful but structurally monolithic.
@@ -585,3 +742,56 @@ When editing this codebase:
   4. formal endpoint contracts
   5. frontend modularization
   6. move secrets to environment variables
+
+---
+
+## 19) Quick Reference
+
+### Live URLs
+
+| Environment | URL |
+|---|---|
+| Production | https://excetive-dashboardd.vercel.app |
+| Local API | http://localhost:3000 |
+| Local Frontend | http://localhost:8000/index.html |
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `server.js` | Express bootstrap + route mounting |
+| `index.html` | Entire frontend app |
+| `vercel.json` | Vercel static + API config |
+| `controllers/cpcController.js` | Cost Per Client metric |
+| `CLAUDE.md` | Internal operations & architecture notes |
+
+### Commands
+
+```bash
+# Local dev (two terminals)
+# Terminal 1: Backend
+npm start
+
+# Terminal 2: Frontend
+python3 -m http.server 8000
+
+# Deploy to Vercel
+vercel --prod --yes
+
+# Push to GitHub
+git push chargebee-project main
+```
+
+### Debugging
+
+```bash
+# Check if ports are free
+lsof -i :3000
+lsof -i :8000
+
+# Test API endpoint
+curl http://localhost:3000/api/cpc
+
+# Test frontend
+curl http://localhost:8000/index.html | head -20
+```
