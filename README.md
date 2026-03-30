@@ -230,7 +230,16 @@ Files:
 
 - **`formSubmissionsFunnelController.js`**
   - Connects selected forms + submissions to booking/show/mishap outcomes.
-  - Returns per-form rows and overall summary rates.
+  - **Data Fix Logic:** 
+    - Automatically counts contacts that showed but weren't booked as booked (corrects tagging gaps).
+    - Applies mishap overrides to booked/showed contacts correctly.
+  - **Contact Status Mapping:** Uses a Map-based approach to handle duplicate entries and status precedence.
+  - **Per-Form Stats:** Calculates for each target form:
+    - submission count, booked (personal/business), showed (personal/business)
+    - mishaps (personal/business)
+    - show rate (showed ÷ booked), no-show rate (mishaps ÷ booked)
+  - **Overall Summary:** Aggregates totals across all forms and calculates overall show/no-show rates.
+  - **Response:** JSON with `summary` (totals + rates) and `formSubmissionsBySource` (per-form breakdown).
 
 ---
 
@@ -365,15 +374,18 @@ Base: `http://localhost:3000` (local) or deployed domain.
   - Response:
     - `summary`:
       - `totalSubmissions`
-      - `totalBookedPersonal`
-      - `totalBookedBusiness`
-      - `totalShowedPersonal`
-      - `totalShowedBusiness`
-      - `totalMishapsPersonal`
-      - `totalMishapsBusiness`
-      - `overallShowRate`
-      - `overallNoShowRate`
-    - `formSubmissionsBySource`: array of per-form stats
+      - `totalBookedPersonal` / `totalBookedBusiness`
+      - `totalShowedPersonal` / `totalShowedBusiness`
+      - `totalMishapsPersonal` / `totalMishapsBusiness`
+      - `overallShowRate` (%)
+      - `overallNoShowRate` (%)
+    - `formSubmissionsBySource`: array of per-form objects:
+      - `formName`
+      - `submissions` (count)
+      - `bookedPersonal`, `bookedBusiness`, `showedPersonal`, `showedBusiness`
+      - `mishapsPersonal`, `mishapsBusiness`
+      - `showRate` (%)
+      - `noShowRate` (%)
 
 ---
 
@@ -707,13 +719,19 @@ When editing this codebase:
 
 ## 18) Maintainer Notes & Future Work
 
-### Current State (23 March 2026)
+### Current State (30 March 2026)
+
+- **Form Submissions Funnel Feature:** ✅ Enhanced with data fix logic
+  - Automatically counts showed-but-not-booked contacts as booked (corrects tagging gaps)
+  - Per-form statistics with show/no-show rate calculations
+  - Overall summary with aggregated metrics across all forms
+  - Data integrity improvements
 
 - **CPC (Cost Per Client) Feature:** ✅ Fully implemented, tested, deployed
   - Backend: `/api/cpc` endpoint
   - Frontend: Show Rate tab with summary cards + data table
   - Make webhook: Array Aggregator pattern for multi-row support
-  - Live data: 4 rows (17–20 March) with correct CPC calculations
+  - Live data: updates as new rows are added
 
 - **Deployment:** ✅ Live on Vercel
   - Static + API configuration working

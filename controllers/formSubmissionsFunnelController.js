@@ -140,9 +140,21 @@ const getFormSubmissionsFunnel = async (req, res) => {
       "New Lead Schedule Form",
       "New Lead Schedule Form - Credit Report",
     ];
-    const filteredForms = allForms.filter((f) =>
-      TARGET_FORM_NAMES.includes(f.name)
-    );
+    const NEW_LEAD_SCHEDULE_FORM_ID = "cxiA5xGHbUPbDozNHOEl";
+    
+    const filteredForms = allForms.filter((f) => {
+      // Check if form name is in target list
+      if (!TARGET_FORM_NAMES.includes(f.name)) {
+        return false;
+      }
+      
+      // For "New Lead Schedule Form", only include if ID matches
+      if (f.name === "New Lead Schedule Form" && f.id !== NEW_LEAD_SCHEDULE_FORM_ID) {
+        return false;
+      }
+      
+      return true;
+    });
 
     // Create contact status map with data fix
     const contactMap = new Map();
