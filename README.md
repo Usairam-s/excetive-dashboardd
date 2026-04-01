@@ -756,6 +756,25 @@ When editing this codebase:
 
 ## 18) Maintainer Notes & Future Work
 
+### Current State (2 April 2026)
+
+- **Calendar Events Feature:** ✅ Pulled from `chargebee-project` remote and deployed
+  - New controller: `controllers/calendarEventsController.js`
+  - New route: `routes/calendarEvents.js` → `/api/calendar-events`
+  - Integration: LeadConnector calendar API, filtered by `calendarId` + `dateFilter`
+  - Date filters: `today`, `yesterday`, `custom` (fromDate/toDate), `all`
+  - Returns: `totalApiResults`, `totalFiltered`, `statusCounts` (confirmed/showed/noshow/cancelled/rescheduled), first 50 events
+  - Frontend: Calendar Events section inside Funnel Snapshot tab
+    - Calendar dropdown (4 calendars: Personal Phone, Personal Office, Business, Business Office)
+    - Time Range selector with custom date range inputs
+    - 5 status cards (Confirmed, Showed, No Show, Cancelled, Rescheduled)
+    - Auto-loads on funnel snapshot tab open; re-loads on Apply Filters button
+  - Deployed to Vercel: `https://excetive-dashboardd.vercel.app`
+  - Committed and pushed to `chargebee-project/main` (commit `58aff03`)
+
+- **README:** ✅ Updated to reflect all changes from this session
+  - Project structure, route list, controller descriptions, API endpoint docs, frontend wiring, quick verification, and key files table all updated
+
 ### Current State (30 March 2026)
 
 - **Form Submissions Funnel Feature:** ✅ Enhanced with data fix logic
