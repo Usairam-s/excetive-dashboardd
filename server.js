@@ -13,6 +13,7 @@ const weeklyNetGrowthRoutes = require("./routes/weeklyNetGrowth");
 const showRateBySourceRoutes = require("./routes/showRateBySource");
 const formSubmissionsFunnelRoutes = require("./routes/formSubmissionsFunnel");
 const cpcRoutes = require("./routes/cpc");
+const calendarEventsRoutes = require("./routes/calendarEvents");
 
 const app = express();
 
@@ -91,6 +92,7 @@ app.use("/api/cohort-retention", cohortRetentionRoutes);
 app.use("/api/weekly-net-growth", weeklyNetGrowthRoutes);
 app.use("/api/show-rate-by-source", showRateBySourceRoutes);
 app.use("/api/form-submissions-funnel", formSubmissionsFunnelRoutes);
+app.use("/api/calendar-events", calendarEventsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

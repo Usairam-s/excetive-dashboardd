@@ -1412,213 +1412,245 @@
           </div>
         </div>
 
-        <!-- SECTION 3: Time + Personal/Business Filters -->
-        <div class="card-header" id="dual-filter-header" style="display: none">
-          <h2>Appointment Funnel</h2>
-          <div class="period-selector">
-            <button class="period-btn active" data-period="daily">Daily</button>
-            <button class="period-btn" data-period="weekly">Weekly</button>
-            <button class="period-btn" data-period="monthly">Monthly</button>
+        <!-- SECTION 3: Calendar Events -->
+        <div
+          class="card-header"
+          id="calendar-events-header"
+          style="display: none"
+        >
+          <h2>Calendar Events</h2>
+        </div>
+
+        <!-- Calendar Controls -->
+        <div
+          class="dashboard-cards"
+          id="calendar-controls"
+          style="
+            display: none;
+            grid-template-columns: 1fr 1fr auto;
+            margin-bottom: 24px;
+            align-items: center;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="color: #9ca3af; font-size: 14px; font-weight: 500"
+              >Calendar</label
+            >
+            <select
+              id="calendar-select"
+              style="
+                background: #3d3d3d;
+                color: #e5e7eb;
+                border: 1px solid #4d4d4d;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+                cursor: pointer;
+              "
+            >
+              <option value="QUHv4iApIGnJ8Qvnka6x">
+                Personalized Credit Strategy Session (Via Phone)
+              </option>
+              <option value="Z095v2DzPSeYwIbWLmKt">
+                Personalized Credit Strategy Session (Office Appt)
+              </option>
+              <option value="A1iTIsswqgMnXmwQqJmT">
+                Business Credit Strategy Session
+              </option>
+              <option value="ZiY99oZCS96vmLgv7H5w">
+                Business Credit Strategy Session (Office)
+              </option>
+            </select>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="color: #9ca3af; font-size: 14px; font-weight: 500"
+              >Time Range</label
+            >
+            <select
+              id="time-range-select"
+              style="
+                background: #3d3d3d;
+                color: #e5e7eb;
+                border: 1px solid #4d4d4d;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+                cursor: pointer;
+              "
+            >
+              <option value="today">Created Today</option>
+              <option value="yesterday">Created Yesterday</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="color: transparent; font-size: 14px; font-weight: 500"
+              >.</label
+            >
+            <button
+              id="fetch-calendar-events-btn"
+              style="
+                background: linear-gradient(135deg, #f97316, #ea580c);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 24px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+              onmouseover="
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
+              "
+              onmouseout="
+                this.style.transform = '';
+                this.style.boxShadow = '';
+              "
+            >
+              <i class="fas fa-filter" style="margin-right: 8px"></i>Apply
+              Filters
+            </button>
           </div>
         </div>
 
-        <!-- Personal/Business Tabs -->
-        <div class="funnel-tabs" id="funnel-tabs" style="display: none">
-          <div class="tab-navigation">
-            <button class="tab-btn active" data-funnel-tab="personal">
-              <i class="fas fa-user"></i>
-              Personal
-            </button>
-            <button class="tab-btn" data-funnel-tab="business">
-              <i class="fas fa-building"></i>
-              Business
-            </button>
+        <!-- Custom Date Range (Hidden by default) -->
+        <div
+          id="custom-date-range"
+          class="dashboard-cards"
+          style="
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            margin-bottom: 24px;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="color: #9ca3af; font-size: 14px; font-weight: 500"
+              >From Date</label
+            >
+            <input
+              type="date"
+              id="from-date"
+              style="
+                background: #3d3d3d;
+                color: #e5e7eb;
+                border: 1px solid #4d4d4d;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+              "
+            />
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label style="color: #9ca3af; font-size: 14px; font-weight: 500"
+              >To Date</label
+            >
+            <input
+              type="date"
+              id="to-date"
+              style="
+                background: #3d3d3d;
+                color: #e5e7eb;
+                border: 1px solid #4d4d4d;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+              "
+            />
+          </div>
+        </div>
+
+        <!-- Calendar Status Cards -->
+        <div
+          class="dashboard-cards"
+          id="calendar-status-cards"
+          style="
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            margin-bottom: 24px;
+          "
+        >
+          <div class="card">
+            <div
+              class="card-icon"
+              style="background: linear-gradient(135deg, #3b82f6, #2563eb)"
+            >
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="card-title">Confirmed</div>
+            <div class="card-value" id="calendar-confirmed-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Appointments confirmed</div>
           </div>
 
-          <!-- Personal Tab Content -->
-          <div id="personal-content" class="funnel-tab-content active">
+          <div class="card">
             <div
-              class="dashboard-cards"
-              style="
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 24px;
-                padding: 0 20px;
-                margin-bottom: 20px;
-              "
+              class="card-icon"
+              style="background: linear-gradient(135deg, #10b981, #059669)"
             >
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
-                >
-                  <i class="fas fa-calendar-check"></i>
-                </div>
-                <div class="card-title">Booked</div>
-                <div class="card-value" id="personal-booked">0</div>
-                <div class="card-subtitle">Appointment scheduled</div>
-              </div>
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #10b981, #059669)"
-                >
-                  <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="card-title">Showed</div>
-                <div class="card-value" id="personal-showed">0</div>
-                <div class="card-subtitle">Appointment completed</div>
-              </div>
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #ef4444, #dc2626)"
-                >
-                  <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="card-title">No Show / Cancel</div>
-                <div class="card-value" id="personal-mishaps-count">0</div>
-                <div
-                  class="card-value"
-                  id="personal-mishaps-amount"
-                  style="font-size: 18px; color: #ef4444"
-                >
-                  $0
-                </div>
-                <div class="card-subtitle">Cancelled, invalid, no-show</div>
-              </div>
+              <i class="fas fa-user-check"></i>
             </div>
-
-            <!-- Show Rate % Card -->
-            <div
-              class="dashboard-cards"
-              style="
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 24px;
-                padding: 0 20px;
-                margin-bottom: 20px;
-              "
-            >
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #06b6d4, #0891b2)"
-                >
-                  <i class="fas fa-percentage"></i>
-                </div>
-                <div class="card-title">Show Rate %</div>
-                <div class="card-value" id="personal-show-rate">0%</div>
-                <div class="card-subtitle">Showed ÷ Booked × 100</div>
-              </div>
+            <div class="card-title">Showed</div>
+            <div class="card-value" id="calendar-showed-count">
+              <span class="skeleton skeleton-large"></span>
             </div>
-
-            <!-- Personal Appointment Visualization -->
-            <div
-              class="appointment-viz-container"
-              id="personal-viz"
-              style="display: none"
-            >
-              <div class="appointment-viz-header">
-                Personal Conversion Funnel
-              </div>
-              <div class="appointment-viz-chart">
-                <canvas id="personalFunnelChart"></canvas>
-              </div>
-            </div>
+            <div class="card-subtitle">Appointments attended</div>
           </div>
 
-          <!-- Business Tab Content -->
-          <div id="business-content" class="funnel-tab-content">
+          <div class="card">
             <div
-              class="dashboard-cards"
-              style="
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 24px;
-                padding: 0 20px;
-                margin-bottom: 20px;
-              "
+              class="card-icon"
+              style="background: linear-gradient(135deg, #ef4444, #dc2626)"
             >
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
-                >
-                  <i class="fas fa-calendar-check"></i>
-                </div>
-                <div class="card-title">Booked</div>
-                <div class="card-value" id="business-booked">0</div>
-                <div class="card-subtitle">Appointment scheduled</div>
-              </div>
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #10b981, #059669)"
-                >
-                  <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="card-title">Showed</div>
-                <div class="card-value" id="business-showed">0</div>
-                <div class="card-subtitle">Appointment completed</div>
-              </div>
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #ef4444, #dc2626)"
-                >
-                  <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="card-title">No Show / Cancel</div>
-                <div class="card-value" id="business-mishaps-count">0</div>
-                <div
-                  class="card-value"
-                  id="business-mishaps-amount"
-                  style="font-size: 18px; color: #ef4444"
-                >
-                  $0
-                </div>
-                <div class="card-subtitle">Cancelled, invalid, no-show</div>
-              </div>
+              <i class="fas fa-times-circle"></i>
             </div>
+            <div class="card-title">No Show</div>
+            <div class="card-value" id="calendar-noshow-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Did not attend</div>
+          </div>
+        </div>
 
-            <!-- Show Rate % Card -->
+        <div
+          class="dashboard-cards"
+          id="calendar-status-cards-row2"
+          style="
+            display: none;
+            grid-template-columns: repeat(2, 1fr);
+            margin-bottom: 24px;
+          "
+        >
+          <div class="card">
             <div
-              class="dashboard-cards"
-              style="
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 24px;
-                padding: 0 20px;
-                margin-bottom: 20px;
-              "
+              class="card-icon"
+              style="background: linear-gradient(135deg, #f59e0b, #d97706)"
             >
-              <div class="card">
-                <div
-                  class="card-icon"
-                  style="background: linear-gradient(135deg, #06b6d4, #0891b2)"
-                >
-                  <i class="fas fa-percentage"></i>
-                </div>
-                <div class="card-title">Show Rate %</div>
-                <div class="card-value" id="business-show-rate">0%</div>
-                <div class="card-subtitle">Showed ÷ Booked × 100</div>
-              </div>
+              <i class="fas fa-ban"></i>
             </div>
+            <div class="card-title">Cancelled</div>
+            <div class="card-value" id="calendar-cancelled-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Appointments cancelled</div>
+          </div>
 
-            <!-- Business Appointment Visualization -->
+          <div class="card">
             <div
-              class="appointment-viz-container"
-              id="business-viz"
-              style="display: none"
+              class="card-icon"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
             >
-              <div class="appointment-viz-header">
-                Business Conversion Funnel
-              </div>
-              <div class="appointment-viz-chart">
-                <canvas id="businessFunnelChart"></canvas>
-              </div>
+              <i class="fas fa-calendar-alt"></i>
             </div>
+            <div class="card-title">Rescheduled</div>
+            <div class="card-value" id="calendar-rescheduled-count">
+              <span class="skeleton skeleton-large"></span>
+            </div>
+            <div class="card-subtitle">Appointments rescheduled</div>
           </div>
         </div>
       </div>
@@ -2347,12 +2379,19 @@
     </div>
 
     <script>
-      const API_BASE_URL = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://excetive-dashboardd.vercel.app";
+      /*
+      const API_BASE_URL =
+        window.location.hostname === "localhost"
+          ? "http://localhost:3000"
+          : "https://excetive-dashboardd.vercel.app";
+
+      */
+
+      const API_BASE_URL = "http://localhost:3000";
 
       let currentPeriod = "daily";
       let currentTab = "gross-revenue";
       let timeOnlyPeriod = "daily"; // Separate period for time-only section
-      let appointmentPeriod = "daily"; // Separate period for appointment section
       let grossRevenueData = null;
       let funnelSnapshotData = null;
       let clientBaseHealthData = null;
@@ -2368,12 +2407,11 @@
       let cpcData = null;
       let currentTopSources = 3;
       let currentFormTopSources = 3;
+      let calendarEventsData = null;
 
       // Chart instances
       let revenueChart = null;
       let funnelFlowChart = null;
-      let personalFunnelChart = null;
-      let businessFunnelChart = null;
 
       // Tab switching
       document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
@@ -2392,7 +2430,6 @@
           loadGrossRevenueData();
         } else if (tabName === "funnel-snapshot") {
           timeOnlyPeriod = "daily";
-          appointmentPeriod = "daily";
           funnelSnapshotData = null;
           loadFunnelSnapshotData();
         } else if (tabName === "client-base-health") {
@@ -3007,9 +3044,14 @@
         if (!data) return;
 
         document.getElementById("cpc-total-spend").textContent =
-          "$" + (data.summary.totalSpend || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        document.getElementById("cpc-total-customers").textContent =
-          (data.summary.totalCustomers || 0).toLocaleString();
+          "$" +
+          (data.summary.totalSpend || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        document.getElementById("cpc-total-customers").textContent = (
+          data.summary.totalCustomers || 0
+        ).toLocaleString();
         document.getElementById("cpc-avg-cost").textContent =
           "$" + (data.summary.averageCostPerClient || 0).toFixed(2);
 
@@ -3415,71 +3457,6 @@
         });
       }
 
-      // NEW: Update appointment funnel charts (PIE CHARTS)
-      function updateAppointmentFunnelChart(
-        canvasId,
-        booked,
-        showed,
-        mishaps,
-        chartInstance,
-      ) {
-        const ctx = document.getElementById(canvasId).getContext("2d");
-
-        if (chartInstance) {
-          chartInstance.destroy();
-        }
-
-        const newChart = new Chart(ctx, {
-          type: "doughnut",
-          data: {
-            labels: ["Showed", "No Show/Cancel"],
-            datasets: [
-              {
-                data: [showed, mishaps],
-                backgroundColor: [
-                  "rgba(16, 185, 129, 0.8)",
-                  "rgba(239, 68, 68, 0.8)",
-                ],
-                borderColor: ["rgba(16, 185, 129, 1)", "rgba(239, 68, 68, 1)"],
-                borderWidth: 2,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: true,
-                position: "bottom",
-                labels: {
-                  color: "#9ca3af",
-                  font: {
-                    size: 12,
-                  },
-                  padding: 20,
-                },
-              },
-              tooltip: {
-                backgroundColor: "rgba(0, 0, 0, 0.9)",
-                titleColor: "white",
-                bodyColor: "white",
-                callbacks: {
-                  label: function (context) {
-                    return (
-                      context.label + ": " + context.parsed + " appointments"
-                    );
-                  },
-                },
-              },
-            },
-            cutout: "60%",
-          },
-        });
-
-        return newChart;
-      }
-
       // Update funnel snapshot dashboard
       function updateFunnelSnapshotDashboard(data) {
         document.getElementById("loading").style.display = "none";
@@ -3492,14 +3469,17 @@
           "block";
         document.getElementById("risk-section-header").style.display = "block";
         document.getElementById("split-risk-card").style.display = "flex";
-        document.getElementById("dual-filter-header").style.display = "flex";
-        document.getElementById("funnel-tabs").style.display = "block";
-        document.getElementById("personal-viz").style.display = "block";
-        document.getElementById("business-viz").style.display = "block";
+        document.getElementById("calendar-events-header").style.display =
+          "flex";
+        document.getElementById("calendar-controls").style.display = "grid";
 
         // Update sections using their respective periods
         updateTimeOnlySection(data);
-        updateAppointmentSection(data);
+
+        // Auto-load calendar events with default settings (first calendar + today)
+        if (!calendarEventsData) {
+          loadCalendarEvents();
+        }
 
         // Update conversion card if data is available
         if (weeklyConversionData) {
@@ -3590,6 +3570,90 @@
         });
       });
 
+      // Calendar Events: Time range change handler
+      document.addEventListener("DOMContentLoaded", function () {
+        const timeRangeSelect = document.getElementById("time-range-select");
+        const customDateRange = document.getElementById("custom-date-range");
+        const fetchBtn = document.getElementById("fetch-calendar-events-btn");
+
+        if (timeRangeSelect) {
+          timeRangeSelect.addEventListener("change", function () {
+            if (this.value === "custom") {
+              customDateRange.style.display = "grid";
+            } else {
+              customDateRange.style.display = "none";
+            }
+          });
+        }
+
+        if (fetchBtn) {
+          fetchBtn.addEventListener("click", loadCalendarEvents);
+        }
+      });
+
+      // Load calendar events
+      async function loadCalendarEvents() {
+        try {
+          const calendarId = document.getElementById("calendar-select").value;
+          const dateFilter = document.getElementById("time-range-select").value;
+          const fromDate = document.getElementById("from-date").value;
+          const toDate = document.getElementById("to-date").value;
+
+          // Reset cards to skeleton state
+          document.getElementById("calendar-confirmed-count").innerHTML =
+            '<span class="skeleton skeleton-large"></span>';
+          document.getElementById("calendar-showed-count").innerHTML =
+            '<span class="skeleton skeleton-large"></span>';
+          document.getElementById("calendar-noshow-count").innerHTML =
+            '<span class="skeleton skeleton-large"></span>';
+          document.getElementById("calendar-cancelled-count").innerHTML =
+            '<span class="skeleton skeleton-large"></span>';
+          document.getElementById("calendar-rescheduled-count").innerHTML =
+            '<span class="skeleton skeleton-large"></span>';
+
+          // Show skeleton loading
+          document.getElementById("calendar-status-cards").style.display =
+            "grid";
+          document.getElementById("calendar-status-cards-row2").style.display =
+            "grid";
+
+          let url = `${API_BASE_URL}/api/calendar-events?calendarId=${calendarId}`;
+          if (dateFilter) {
+            url += `&dateFilter=${dateFilter}`;
+          }
+          if (dateFilter === "custom" && fromDate && toDate) {
+            url += `&fromDate=${fromDate}&toDate=${toDate}`;
+          }
+
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          calendarEventsData = await response.json();
+          updateCalendarEventsDashboard(calendarEventsData);
+        } catch (error) {
+          console.error("Error loading calendar events:", error);
+          alert("Error loading calendar events. Please try again.");
+        }
+      }
+
+      // Update calendar events dashboard
+      function updateCalendarEventsDashboard(data) {
+        if (!data) return;
+
+        document.getElementById("calendar-confirmed-count").textContent =
+          data.statusCounts.confirmed.toLocaleString();
+        document.getElementById("calendar-showed-count").textContent =
+          data.statusCounts.showed.toLocaleString();
+        document.getElementById("calendar-noshow-count").textContent =
+          data.statusCounts.noshow.toLocaleString();
+        document.getElementById("calendar-cancelled-count").textContent =
+          data.statusCounts.cancelled.toLocaleString();
+        document.getElementById("calendar-rescheduled-count").textContent =
+          data.statusCounts.rescheduled.toLocaleString();
+      }
+
       // Reset to daily when switching main tabs
       function switchTab(tabName) {
         document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
@@ -3623,15 +3687,6 @@
             .forEach((btn) => {
               btn.classList.remove("active");
               if (btn.dataset.period === timeOnlyPeriod) {
-                btn.classList.add("active");
-              }
-            });
-          // Update appointment section buttons
-          document
-            .querySelectorAll("#dual-filter-header .period-btn")
-            .forEach((btn) => {
-              btn.classList.remove("active");
-              if (btn.dataset.period === appointmentPeriod) {
                 btn.classList.add("active");
               }
             });
@@ -3672,24 +3727,6 @@
 
               if (currentTab === "funnel-snapshot" && funnelSnapshotData) {
                 updateTimeOnlySection(funnelSnapshotData);
-              }
-            }
-          });
-
-        // Appointment section period buttons
-        document
-          .getElementById("dual-filter-header")
-          .addEventListener("click", function (e) {
-            if (e.target.classList.contains("period-btn")) {
-              // Update active state for appointment section
-              e.target.parentElement
-                .querySelectorAll(".period-btn")
-                .forEach((btn) => btn.classList.remove("active"));
-              e.target.classList.add("active");
-              appointmentPeriod = e.target.dataset.period;
-
-              if (currentTab === "funnel-snapshot" && funnelSnapshotData) {
-                updateAppointmentSection(funnelSnapshotData);
               }
             }
           });
@@ -3741,66 +3778,6 @@
           closeRate + "%";
 
         updateFunnelFlowChart(data);
-      }
-
-      // Update only appointment section
-      function updateAppointmentSection(data) {
-        document.getElementById("personal-booked").textContent =
-          data.booked.personal[appointmentPeriod];
-        document.getElementById("personal-showed").textContent =
-          data.showed.personal[appointmentPeriod];
-        document.getElementById("personal-mishaps-count").textContent =
-          data.mishaps.personal[appointmentPeriod].count;
-        document.getElementById("personal-mishaps-amount").textContent =
-          "$" + data.mishaps.personal[appointmentPeriod].amount.toFixed(0);
-
-        document.getElementById("business-booked").textContent =
-          data.booked.business[appointmentPeriod];
-        document.getElementById("business-showed").textContent =
-          data.showed.business[appointmentPeriod];
-        document.getElementById("business-mishaps-count").textContent =
-          data.mishaps.business[appointmentPeriod].count;
-        document.getElementById("business-mishaps-amount").textContent =
-          "$" + data.mishaps.business[appointmentPeriod].amount.toFixed(0);
-
-        // Calculate and display Show Rate %
-        const personalShowRate =
-          data.booked.personal[appointmentPeriod] > 0
-            ? (
-                (data.showed.personal[appointmentPeriod] /
-                  data.booked.personal[appointmentPeriod]) *
-                100
-              ).toFixed(1)
-            : 0;
-        const businessShowRate =
-          data.booked.business[appointmentPeriod] > 0
-            ? (
-                (data.showed.business[appointmentPeriod] /
-                  data.booked.business[appointmentPeriod]) *
-                100
-              ).toFixed(1)
-            : 0;
-
-        document.getElementById("personal-show-rate").textContent =
-          personalShowRate + "%";
-        document.getElementById("business-show-rate").textContent =
-          businessShowRate + "%";
-
-        personalFunnelChart = updateAppointmentFunnelChart(
-          "personalFunnelChart",
-          data.booked.personal[appointmentPeriod],
-          data.showed.personal[appointmentPeriod],
-          data.mishaps.personal[appointmentPeriod].count,
-          personalFunnelChart,
-        );
-
-        businessFunnelChart = updateAppointmentFunnelChart(
-          "businessFunnelChart",
-          data.booked.business[appointmentPeriod],
-          data.showed.business[appointmentPeriod],
-          data.mishaps.business[appointmentPeriod].count,
-          businessFunnelChart,
-        );
       }
 
       // Update period handlers
