@@ -140,6 +140,10 @@ const getFormSubmissionsFunnel = async (req, res) => {
       "New Lead Schedule Form",
       "New Lead Schedule Form - Credit Report",
     ];
+
+    //     const filteredForms = allForms.filter((f) =>
+    //   TARGET_FORM_NAMES.includes(f.name)
+    // );
     const NEW_LEAD_SCHEDULE_FORM_ID = "cxiA5xGHbUPbDozNHOEl";
     
     const filteredForms = allForms.filter((f) => {

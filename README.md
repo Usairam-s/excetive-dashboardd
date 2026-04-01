@@ -50,6 +50,7 @@ excetive-dashboardd/
   vercel.json
   controllers/
     alertsController.js
+    calendarEventsController.js
     clientBaseHealthController.js
     cohortRetentionController.js
     cpcController.js
@@ -64,6 +65,7 @@ excetive-dashboardd/
     weeklySignupPaidConversionController.js
   routes/
     alerts.js
+    calendarEvents.js
     clientBaseHealth.js
     cohortRetention.js
     cpc.js
@@ -130,6 +132,7 @@ Each route file follows the same pattern:
 
 Files:
 - `alerts.js` → `getAlerts`
+- `calendarEvents.js` → `getCalendarEvents`
 - `clientBaseHealth.js` → `getClientBaseHealth`
 - `cohortRetention.js` → `getCohortRetention`
 - `cpc.js` → `getCpc`
@@ -227,6 +230,18 @@ Files:
       "summary": { "totalSpend": 565.57, "totalCustomers": 183, "averageCostPerClient": 3.09 }
     }
     ```
+
+- **`calendarEventsController.js`**
+  - Fetches calendar events from LeadConnector for a selected `calendarId`.
+  - Supports server-side date filtering by event `dateAdded`:
+    - `today`
+    - `yesterday`
+    - `custom` (with `fromDate` and `toDate`)
+  - Returns:
+    - `totalApiResults`
+    - `totalFiltered`
+    - `statusCounts` (`confirmed`, `showed`, `noshow`, `cancelled`, `rescheduled`)
+    - `events` (first 50 events)
 
 - **`formSubmissionsFunnelController.js`**
   - Connects selected forms + submissions to booking/show/mishap outcomes.
@@ -387,6 +402,22 @@ Base: `http://localhost:3000` (local) or deployed domain.
       - `showRate` (%)
       - `noShowRate` (%)
 
+- `GET /api/calendar-events`
+  - Query params:
+    - `calendarId` (required)
+    - `dateFilter` (optional: `today`, `yesterday`, `custom`, `all`)
+    - `fromDate`, `toDate` (required when `dateFilter=custom`)
+  - Response:
+    - `totalApiResults`
+    - `totalFiltered`
+    - `statusCounts`:
+      - `confirmed`
+      - `showed`
+      - `noshow`
+      - `cancelled`
+      - `rescheduled`
+    - `events` (capped to first 50)
+
 ---
 
 ## 7) Environment Configuration & API Base URL
@@ -432,6 +463,11 @@ This eliminates manual URL updates when moving between local and production.
   - Uses `/api/funnel-snapshot` + `/api/weekly-signup-paid-conversion`
   - Has two independent period selectors (`timeOnlyPeriod`, `appointmentPeriod`)
   - Renders funnel flow chart and personal/business doughnut charts
+  - Includes a Calendar Events section:
+    - Calendar selector + date filter controls
+    - Custom date range inputs for `custom` mode
+    - Status cards for confirmed/showed/no-show/cancelled/rescheduled
+    - Loads data from `/api/calendar-events`
 
 - **Client Base Health tab**
   - Uses `/api/client-base-health`
@@ -584,6 +620,7 @@ curl http://localhost:3000/api/funnel-snapshot
 curl http://localhost:3000/api/client-base-health
 curl http://localhost:3000/api/alerts
 curl http://localhost:3000/api/cpc
+curl "http://localhost:3000/api/calendar-events?calendarId=QUHv4iApIGnJ8Qvnka6x&dateFilter=today"
 
 # Frontend health check
 curl http://localhost:8000/index.html | head -20
@@ -781,6 +818,7 @@ When editing this codebase:
 | `index.html` | Entire frontend app |
 | `vercel.json` | Vercel static + API config |
 | `controllers/cpcController.js` | Cost Per Client metric |
+| `controllers/calendarEventsController.js` | Calendar events status metrics by calendar/date |
 | `CLAUDE.md` | Internal operations & architecture notes |
 
 ### Commands
