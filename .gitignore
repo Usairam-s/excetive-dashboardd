@@ -6,4 +6,5 @@ backup/
 node_modules/
 
 .forms-viewer.html
-.show-rate-test.htmlplan.md
+.show-rate-test.html
+plan.md
