@@ -135,14 +135,33 @@ function calculateActiveClients(allSubscriptions) {
   return activeCustomerIds.size;
 }
 
-// Get date range for period
-function getDateRange(period) {
-  // Get current time in America/New_York timezone (GMT-5)
+// Get date range for period, single date, or explicit start/end range
+// period: "daily" | "weekly" | "monthly" | "custom" | "range"
+// selectedDate: "YYYY-MM-DD" (used when period === "custom")
+// rangeStart / rangeEnd: "YYYY-MM-DD" (used when period === "range")
+function getDateRange(period, selectedDate, rangeStart, rangeEnd) {
   const now = new Date();
   const currentTime = Math.floor(Date.now() / 1000);
   let startDate;
+  let endDate = currentTime;
 
-  if (period === "daily") {
+  if (period === "range" && rangeStart && rangeEnd) {
+    // Date range: start NY midnight → end NY 23:59:59
+    const [sy, sm, sd] = rangeStart.split("-").map(Number);
+    const [ey, em, ed] = rangeEnd.split("-").map(Number);
+    const rangeStartTs = new Date(Date.UTC(sy, sm - 1, sd, 5, 0, 0, 0));
+    const rangeEndTs   = new Date(Date.UTC(ey, em - 1, ed + 1, 4, 59, 59, 0));
+    startDate = Math.floor(rangeStartTs.getTime() / 1000);
+    endDate   = Math.floor(rangeEndTs.getTime() / 1000);
+  } else if (period === "custom" && selectedDate) {
+    // Custom single date: midnight-to-23:59:59 NY time
+    // NY midnight = 05:00 UTC (standard time offset used consistently across app)
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const dayStart = new Date(Date.UTC(year, month - 1, day, 5, 0, 0, 0));
+    const dayEnd = new Date(Date.UTC(year, month - 1, day + 1, 4, 59, 59, 0));
+    startDate = Math.floor(dayStart.getTime() / 1000);
+    endDate = Math.floor(dayEnd.getTime() / 1000);
+  } else if (period === "daily") {
     // Daily = Today (current calendar day: 00:00 → now)
     const todayStart = new Date(
       Date.UTC(
@@ -180,18 +199,23 @@ function getDateRange(period) {
     startDate = Math.floor(monthStart.getTime() / 1000);
   }
 
-  return { startDate, endDate: currentTime };
+  return { startDate, endDate };
 }
 
-// Calculate revenue for period
+// Calculate revenue for period, custom date, or explicit range
+// selectedDate: used when period === "custom"
+// rangeStart / rangeEnd: used when period === "range"
 async function calculateRevenue(
   period,
   allTransactions,
   allSubscriptions,
   differentialPrices,
   weeklySalary,
+  selectedDate,
+  rangeStart,
+  rangeEnd,
 ) {
-  const { startDate, endDate } = getDateRange(period);
+  const { startDate, endDate } = getDateRange(period, selectedDate, rangeStart, rangeEnd);
 
   // Filter transactions for the selected period
   const periodTransactions = allTransactions.filter(
@@ -302,7 +326,27 @@ async function calculateRevenue(
 // Main controller function
 const getGrossRevenue = async (req, res) => {
   try {
-    // Fetch all data in parallel
+    const { dateFilter, selectedDate, startDate, endDate } = req.query;
+
+    // Validate YYYY-MM-DD format for any date params
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (selectedDate && !dateRe.test(selectedDate)) {
+      return res.status(400).json({ error: "selectedDate must be YYYY-MM-DD" });
+    }
+    if (startDate && !dateRe.test(startDate)) {
+      return res.status(400).json({ error: "startDate must be YYYY-MM-DD" });
+    }
+    if (endDate && !dateRe.test(endDate)) {
+      return res.status(400).json({ error: "endDate must be YYYY-MM-DD" });
+    }
+    if (dateFilter === "range" && (!startDate || !endDate)) {
+      return res.status(400).json({ error: "dateFilter=range requires startDate and endDate" });
+    }
+    if (startDate && endDate && startDate > endDate) {
+      return res.status(400).json({ error: "startDate must be on or before endDate" });
+    }
+
+    // Fetch all data in parallel (same regardless of period)
     const [transactions, subscriptions, diffPrices, weeklySalary] =
       await Promise.all([
         fetchAllTransactions(),
@@ -311,28 +355,54 @@ const getGrossRevenue = async (req, res) => {
         fetchWeeklySalary(),
       ]);
 
-    // Calculate revenue data for all periods
-    const dailyData = await calculateRevenue(
-      "daily",
-      transactions,
-      subscriptions,
-      diffPrices,
-      weeklySalary,
-    );
-    const weeklyData = await calculateRevenue(
-      "weekly",
-      transactions,
-      subscriptions,
-      diffPrices,
-      weeklySalary,
-    );
-    const monthlyData = await calculateRevenue(
-      "monthly",
-      transactions,
-      subscriptions,
-      diffPrices,
-      weeklySalary,
-    );
+    // Date range mode: client sent dateFilter=range + startDate + endDate
+    if (dateFilter === "range" && startDate && endDate) {
+      const rangeData = await calculateRevenue(
+        "range",
+        transactions,
+        subscriptions,
+        diffPrices,
+        weeklySalary,
+        null,
+        startDate,
+        endDate,
+      );
+      return res.json({ custom: rangeData });
+    }
+
+    // Custom single-date mode: client sent dateFilter=custom + selectedDate
+    if (dateFilter === "custom" && selectedDate) {
+      const customData = await calculateRevenue(
+        "custom",
+        transactions,
+        subscriptions,
+        diffPrices,
+        weeklySalary,
+        selectedDate,
+      );
+      return res.json({ custom: customData });
+    }
+
+    // Preset mode: dateFilter=today|this_week|this_month maps to legacy period keys
+    if (dateFilter === "today") {
+      const data = await calculateRevenue("daily", transactions, subscriptions, diffPrices, weeklySalary);
+      return res.json({ custom: data });
+    }
+    if (dateFilter === "this_week") {
+      const data = await calculateRevenue("weekly", transactions, subscriptions, diffPrices, weeklySalary);
+      return res.json({ custom: data });
+    }
+    if (dateFilter === "this_month") {
+      const data = await calculateRevenue("monthly", transactions, subscriptions, diffPrices, weeklySalary);
+      return res.json({ custom: data });
+    }
+
+    // Legacy fallback: no params → return all three periods (backward compat)
+    const [dailyData, weeklyData, monthlyData] = await Promise.all([
+      calculateRevenue("daily", transactions, subscriptions, diffPrices, weeklySalary),
+      calculateRevenue("weekly", transactions, subscriptions, diffPrices, weeklySalary),
+      calculateRevenue("monthly", transactions, subscriptions, diffPrices, weeklySalary),
+    ]);
 
     res.json({
       daily: dailyData,

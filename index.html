@@ -1035,10 +1035,38 @@
       <div id="gross-revenue-tab" class="tab-content active">
         <div class="card-header" id="card-header" style="display: none">
           <h2>Gross Collected Revenue</h2>
-          <div class="period-selector">
-            <button class="period-btn active" data-period="daily">Daily</button>
-            <button class="period-btn" data-period="weekly">Weekly</button>
-            <button class="period-btn" data-period="monthly">Monthly</button>
+          <div class="period-selector" id="gr-period-selector">
+            <button class="period-btn active" data-gr-filter="today">Today</button>
+            <button class="period-btn" data-gr-filter="this_week">This Week</button>
+            <button class="period-btn" data-gr-filter="this_month">This Month</button>
+            <button class="period-btn" data-gr-filter="custom">Custom Date</button>
+            <button class="period-btn" data-gr-filter="range">Date Range</button>
+          </div>
+          <!-- Single custom date -->
+          <div id="gr-custom-date-wrapper" style="display:none; align-items:center; gap:8px; margin-top:8px;">
+            <label for="gr-selected-date" style="color:#9ca3af; font-size:13px;">Select Date:</label>
+            <input type="date" id="gr-selected-date"
+              style="background:#1f2937; color:#f9fafb; border:1px solid #374151; border-radius:6px; padding:6px 10px; font-size:13px; cursor:pointer;"
+            />
+            <button id="gr-apply-date"
+              style="background:#3b82f6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
+              Apply
+            </button>
+          </div>
+          <!-- Date range -->
+          <div id="gr-range-wrapper" style="display:none; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <label style="color:#9ca3af; font-size:13px;">From:</label>
+            <input type="date" id="gr-range-start"
+              style="background:#1f2937; color:#f9fafb; border:1px solid #374151; border-radius:6px; padding:6px 10px; font-size:13px; cursor:pointer;"
+            />
+            <label style="color:#9ca3af; font-size:13px;">To:</label>
+            <input type="date" id="gr-range-end"
+              style="background:#1f2937; color:#f9fafb; border:1px solid #374151; border-radius:6px; padding:6px 10px; font-size:13px; cursor:pointer;"
+            />
+            <button id="gr-apply-range"
+              style="background:#3b82f6; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer;">
+              Apply
+            </button>
           </div>
         </div>
 
@@ -1185,108 +1213,139 @@
       <!-- Funnel Snapshot Tab -->
       <div id="funnel-snapshot-tab" class="tab-content">
         <!-- SECTION 1: Time Filter Only -->
-        <div class="card-header" id="time-only-header" style="display: none">
+        <div class="card-header" id="time-only-header" style="display: none; flex-direction: column; align-items: flex-start; gap: 10px;">
           <h2>Time-Based Metrics</h2>
-          <div class="period-selector">
-            <button class="period-btn active" data-period="daily">Daily</button>
-            <button class="period-btn" data-period="weekly">Weekly</button>
-            <button class="period-btn" data-period="monthly">Monthly</button>
+          <div class="period-selector" id="fs-period-selector">
+            <button class="period-btn active" data-fs-filter="today">Today</button>
+            <button class="period-btn" data-fs-filter="this_week">This Week</button>
+            <button class="period-btn" data-fs-filter="this_month">This Month</button>
+            <button class="period-btn" data-fs-filter="custom">Custom Date</button>
+            <button class="period-btn" data-fs-filter="range">Date Range</button>
+          </div>
+          <!-- Custom single date picker -->
+          <div id="fs-custom-date-wrapper" style="display: none; align-items: center; gap: 8px;">
+            <input type="date" id="fs-custom-date" style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px;">
+            <button id="fs-apply-date" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px;">Apply</button>
+          </div>
+          <!-- Date range picker -->
+          <div id="fs-range-wrapper" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="color: #9ca3af; font-size: 13px;">From</span>
+            <input type="date" id="fs-range-start" style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px;">
+            <span style="color: #9ca3af; font-size: 13px;">To</span>
+            <input type="date" id="fs-range-end" style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px;">
+            <button id="fs-apply-range" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px;">Apply</button>
           </div>
         </div>
 
         <div
-          class="dashboard-cards"
           id="time-only-metrics"
           style="
             display: none;
-            grid-template-columns: repeat(5, 1fr);
+            flex-direction: row;
+            gap: 24px;
             margin-bottom: 24px;
           "
         >
-          <!-- Leads -->
-          <div class="card">
-            <div
-              class="card-icon"
-              style="background: linear-gradient(135deg, #10b981, #059669)"
-            >
-              <i class="fas fa-users"></i>
+          <!-- Left Column: GHL Group -->
+          <div style="flex: 1; min-width: 0;">
+            <h3 style="color: #9ca3af; font-size: 14px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+              GHL Metrics
+            </h3>
+            <div class="dashboard-cards" style="grid-template-columns: repeat(2, 1fr); gap: 16px;">
+              <!-- Total Leads -->
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #10b981, #059669)"
+                >
+                  <i class="fas fa-users"></i>
+                </div>
+                <div class="card-title">Total Leads</div>
+                <div class="card-value" id="total-leads">0</div>
+                <div class="card-subtitle">New leads</div>
+              </div>
+
+              <!-- Close Rate % -->
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+                >
+                  <i class="fas fa-bullseye"></i>
+                </div>
+                <div class="card-title">Close Rate %</div>
+                <div class="card-value" id="close-rate-percentage">0%</div>
+                <div class="card-subtitle">Enrolled ÷ Total Showed</div>
+              </div>
             </div>
-            <div class="card-title">Total Leads</div>
-            <div class="card-value" id="total-leads">0</div>
-            <div class="card-subtitle">New leads</div>
           </div>
 
-          <!-- Enrolled -->
-          <div class="card">
-            <div
-              class="card-icon"
-              style="background: linear-gradient(135deg, #f59e0b, #d97706)"
-            >
-              <i class="fas fa-trophy"></i>
-            </div>
-            <div class="card-title">Enrolled</div>
-            <div class="card-value" id="enrolled-count-funnel">0</div>
-            <div
-              class="card-value"
-              id="enrolled-revenue-funnel"
-              style="font-size: 18px; color: #f59e0b"
-            >
-              $0
-            </div>
-            <div class="card-subtitle">Trial subscriptions</div>
-          </div>
+          <!-- Right Column: Chargebee Group -->
+          <div style="flex: 1; min-width: 0;">
+            <h3 style="color: #9ca3af; font-size: 14px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+              Chargebee Metrics
+            </h3>
+            <div class="dashboard-cards" style="grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <!-- Enrolled -->
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #f59e0b, #d97706)"
+                >
+                  <i class="fas fa-trophy"></i>
+                </div>
+                <div class="card-title">Enrolled</div>
+                <div class="card-value" id="enrolled-count-funnel">0</div>
+                <div
+                  class="card-value"
+                  id="enrolled-revenue-funnel"
+                  style="font-size: 18px; color: #f59e0b"
+                >
+                  $0
+                </div>
+                <div class="card-subtitle">Trial subscriptions</div>
+              </div>
 
-          <!-- Paid -->
-          <div class="card">
-            <div
-              class="card-icon"
-              style="background: linear-gradient(135deg, #10b981, #059669)"
-            >
-              <i class="fas fa-dollar-sign"></i>
-            </div>
-            <div class="card-title">Paid</div>
-            <div class="card-value" id="paid-count-funnel">0</div>
-            <div
-              class="card-value"
-              id="paid-revenue-funnel"
-              style="font-size: 18px; color: #10b981"
-            >
-              $0
-            </div>
-            <div class="card-subtitle">Active subscriptions</div>
-          </div>
+              <!-- Paid -->
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #10b981, #059669)"
+                >
+                  <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="card-title">Paid</div>
+                <div class="card-value" id="paid-count-funnel">0</div>
+                <div
+                  class="card-value"
+                  id="paid-revenue-funnel"
+                  style="font-size: 18px; color: #10b981"
+                >
+                  $0
+                </div>
+                <div class="card-subtitle">Active subscriptions</div>
+              </div>
 
-          <!-- Close Rate % -->
-          <div class="card">
-            <div
-              class="card-icon"
-              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
-            >
-              <i class="fas fa-bullseye"></i>
+              <!-- Pre-Billing Cancellations -->
+              <div class="card">
+                <div
+                  class="card-icon"
+                  style="background: linear-gradient(135deg, #ef4444, #dc2626)"
+                >
+                  <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="card-title">Pre-Billing Cancel</div>
+                <div class="card-value" id="pre-billing-count">0</div>
+                <div
+                  class="card-value"
+                  id="pre-billing-amount"
+                  style="font-size: 18px; color: #ef4444"
+                >
+                  $0
+                </div>
+                <div class="card-subtitle">Cancelled before billing</div>
+              </div>
             </div>
-            <div class="card-title">Close Rate %</div>
-            <div class="card-value" id="close-rate-percentage">0%</div>
-            <div class="card-subtitle">Enrolled ÷ Total Showed</div>
-          </div>
-
-          <!-- Pre-Billing Cancellations -->
-          <div class="card">
-            <div
-              class="card-icon"
-              style="background: linear-gradient(135deg, #ef4444, #dc2626)"
-            >
-              <i class="fas fa-times-circle"></i>
-            </div>
-            <div class="card-title">Pre-Billing Cancel</div>
-            <div class="card-value" id="pre-billing-count">0</div>
-            <div
-              class="card-value"
-              id="pre-billing-amount"
-              style="font-size: 18px; color: #ef4444"
-            >
-              $0
-            </div>
-            <div class="card-subtitle">Cancelled before billing</div>
           </div>
         </div>
 
@@ -2388,9 +2447,21 @@
 
       let currentPeriod = "daily";
       let currentTab = "gross-revenue";
-      let timeOnlyPeriod = "daily"; // Separate period for time-only section
+      let timeOnlyPeriod = "daily"; // kept for chart compat
+      // Funnel Snapshot date-filter state
+      let fsDateFilter  = "today";   // today | this_week | this_month | custom | range
+      let fsSelectedDate = "";        // YYYY-MM-DD, used when fsDateFilter === "custom"
+      let fsRangeStart  = "";         // YYYY-MM-DD, used when fsDateFilter === "range"
+      let fsRangeEnd    = "";         // YYYY-MM-DD, used when fsDateFilter === "range"
+      // Gross Revenue date-filter state
+      let grDateFilter = "today";   // today | this_week | this_month | custom | range
+      let grSelectedDate = "";      // YYYY-MM-DD, used when grDateFilter === "custom"
+      let grRangeStart = "";        // YYYY-MM-DD, used when grDateFilter === "range"
+      let grRangeEnd = "";          // YYYY-MM-DD, used when grDateFilter === "range"
       let grossRevenueData = null;
       let funnelSnapshotData = null;
+      let funnelSnapshotGhlData = null;
+      let funnelSnapshotChargebeeData = null;
       let clientBaseHealthData = null;
       let alertsData = null;
       let effectiveLifetimeData = null;
@@ -2422,12 +2493,31 @@
       // Refresh tab data
       function refreshTab(tabName) {
         if (tabName === "gross-revenue") {
-          currentPeriod = "daily";
+          grDateFilter = "today";
+          grSelectedDate = "";
+          grRangeStart = "";
+          grRangeEnd = "";
           grossRevenueData = null;
+          // Reset preset buttons UI
+          document.querySelectorAll("#gr-period-selector .period-btn").forEach(b => b.classList.remove("active"));
+          const todayBtn = document.querySelector("#gr-period-selector [data-gr-filter='today']");
+          if (todayBtn) todayBtn.classList.add("active");
+          document.getElementById("gr-custom-date-wrapper").style.display = "none";
+          document.getElementById("gr-range-wrapper").style.display = "none";
           loadGrossRevenueData();
         } else if (tabName === "funnel-snapshot") {
-          timeOnlyPeriod = "daily";
-          funnelSnapshotData = null;
+          fsDateFilter  = "today";
+          fsSelectedDate = "";
+          fsRangeStart  = "";
+          fsRangeEnd    = "";
+          funnelSnapshotGhlData = null;
+          funnelSnapshotChargebeeData = null;
+          // Reset UI
+          document.querySelectorAll("#fs-period-selector .period-btn").forEach(b => b.classList.remove("active"));
+          const fsTodayBtn = document.querySelector("#fs-period-selector [data-fs-filter='today']");
+          if (fsTodayBtn) fsTodayBtn.classList.add("active");
+          document.getElementById("fs-custom-date-wrapper").style.display = "none";
+          document.getElementById("fs-range-wrapper").style.display = "none";
           loadFunnelSnapshotData();
         } else if (tabName === "client-base-health") {
           currentPeriod = "daily";
@@ -2444,20 +2534,32 @@
         }
       }
 
-      // Load gross revenue data
+      // Load gross revenue data (date-filter-aware)
       async function loadGrossRevenueData() {
         try {
           document.getElementById("loading").style.display = "flex";
 
-          const response = await fetch(`${API_BASE_URL}/api/gross-revenue`);
+          // Build query string based on current filter state
+          let url = `${API_BASE_URL}/api/gross-revenue`;
+          if (grDateFilter === "range" && grRangeStart && grRangeEnd) {
+            url += `?dateFilter=range&startDate=${grRangeStart}&endDate=${grRangeEnd}`;
+          } else if (grDateFilter === "custom" && grSelectedDate) {
+            url += `?dateFilter=custom&selectedDate=${grSelectedDate}`;
+          } else {
+            url += `?dateFilter=${grDateFilter}`;
+          }
+
+          const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
-          grossRevenueData = await response.json();
-          updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
+          const json = await response.json();
+          grossRevenueData = json;
+          // New API always returns { custom: {...} }; use that payload directly
+          updateGrossRevenueDashboard(json.custom);
 
-          // Load effective lifetime data (independent of filters)
+          // Load effective lifetime with same date context
           loadEffectiveLifetimeData();
         } catch (error) {
           console.error("Error loading gross revenue data:", error);
@@ -2466,12 +2568,17 @@
         }
       }
 
-      // Load effective lifetime data
+      // Load effective lifetime data (respects current GR date context)
       async function loadEffectiveLifetimeData() {
         try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/effective-lifetime`,
-          );
+          let elUrl = `${API_BASE_URL}/api/effective-lifetime`;
+          if (grDateFilter === "custom" && grSelectedDate) {
+            elUrl += `?selectedDate=${grSelectedDate}`;
+          } else if (grDateFilter !== "today") {
+            // For week/month presets pass selectedDate as last day of that range
+            // (today = default behaviour, no param needed)
+          }
+          const response = await fetch(elUrl);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -2500,24 +2607,44 @@
           lifetime.avgMonthlyCancellations.toFixed(1);
       }
 
-      // Load funnel snapshot data
+      // Load funnel snapshot data (date-filter-aware)
       async function loadFunnelSnapshotData() {
         try {
           document.getElementById("loading").style.display = "flex";
 
-          // Load both APIs simultaneously
-          const [funnelResponse, conversionResponse] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/funnel-snapshot`),
+          // Build URL with date-filter params
+          let queryParams = "";
+          if (fsDateFilter === "range" && fsRangeStart && fsRangeEnd) {
+            queryParams = `?dateFilter=range&startDate=${fsRangeStart}&endDate=${fsRangeEnd}`;
+          } else if (fsDateFilter === "custom" && fsSelectedDate) {
+            queryParams = `?dateFilter=custom&selectedDate=${fsSelectedDate}`;
+          } else {
+            queryParams = `?dateFilter=${fsDateFilter}`;
+          }
+
+          // Load all APIs simultaneously
+          const [ghlResponse, chargebeeResponse, riskResponse, conversionResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/funnel-snapshot-ghl${queryParams}`),
+            fetch(`${API_BASE_URL}/api/funnel-snapshot-chargebee${queryParams}`),
+            fetch(`${API_BASE_URL}/api/funnel-snapshot`), // For revenueAtRisk only
             fetch(`${API_BASE_URL}/api/weekly-signup-paid-conversion`),
           ]);
 
-          if (!funnelResponse.ok) {
+          if (!ghlResponse.ok) {
             throw new Error(
-              `Funnel API error! status: ${funnelResponse.status}`,
+              `GHL API error! status: ${ghlResponse.status}`,
             );
           }
 
-          funnelSnapshotData = await funnelResponse.json();
+          if (!chargebeeResponse.ok) {
+            throw new Error(
+              `Chargebee API error! status: ${chargebeeResponse.status}`,
+            );
+          }
+
+          funnelSnapshotGhlData = await ghlResponse.json();
+          funnelSnapshotChargebeeData = await chargebeeResponse.json();
+          const riskData = await riskResponse.json();
 
           // Handle conversion API response (don't fail if it errors)
           if (conversionResponse.ok) {
@@ -2529,7 +2656,7 @@
             );
           }
 
-          updateFunnelSnapshotDashboard(funnelSnapshotData);
+          updateFunnelSnapshotDashboard(funnelSnapshotGhlData, funnelSnapshotChargebeeData, riskData);
         } catch (error) {
           console.error("Error loading funnel snapshot data:", error);
           document.getElementById("loading").innerHTML =
@@ -3374,17 +3501,19 @@
       }
 
       // NEW: Update funnel flow chart
-      function updateFunnelFlowChart(data) {
+      function updateFunnelFlowChart(ghlData, chargebeeData) {
         const ctx = document.getElementById("funnelFlowChart").getContext("2d");
 
         if (funnelFlowChart) {
           funnelFlowChart.destroy();
         }
 
-        const leads = data.leads[timeOnlyPeriod];
-        const enrolled = data.enrolled[timeOnlyPeriod].count;
-        const paid = data.paid[timeOnlyPeriod].count;
-        const cancelled = data.preBillingCancellations[timeOnlyPeriod].count;
+        // Support both {custom:…} (filtered) and legacy shapes
+        const isCustom = !!ghlData.custom;
+        const leads     = isCustom ? ghlData.custom.leads                                   : ghlData.leads[timeOnlyPeriod];
+        const enrolled  = isCustom ? chargebeeData.custom.enrolled.count                   : chargebeeData.enrolled[timeOnlyPeriod].count;
+        const paid      = isCustom ? chargebeeData.custom.paid.count                       : chargebeeData.paid[timeOnlyPeriod].count;
+        const cancelled = isCustom ? chargebeeData.custom.preBillingCancellations.count    : chargebeeData.preBillingCancellations[timeOnlyPeriod].count;
 
         funnelFlowChart = new Chart(ctx, {
           type: "bar",
@@ -3455,12 +3584,12 @@
       }
 
       // Update funnel snapshot dashboard
-      function updateFunnelSnapshotDashboard(data) {
+      function updateFunnelSnapshotDashboard(ghlData, chargebeeData, riskData) {
         document.getElementById("loading").style.display = "none";
 
         // Show all sections
         document.getElementById("time-only-header").style.display = "flex";
-        document.getElementById("time-only-metrics").style.display = "grid";
+        document.getElementById("time-only-metrics").style.display = "flex";
         document.getElementById("funnel-flow-viz").style.display = "block";
         document.getElementById("split-conversion-card").style.display =
           "block";
@@ -3470,8 +3599,8 @@
           "flex";
         document.getElementById("calendar-controls").style.display = "grid";
 
-        // Update sections using their respective periods
-        updateTimeOnlySection(data);
+        // Update sections using GHL and Chargebee data
+        updateTimeOnlySection(ghlData, chargebeeData);
 
         // Auto-load calendar events with default settings (first calendar + today)
         if (!calendarEventsData) {
@@ -3484,26 +3613,27 @@
         }
 
         // Update split risk card (not affected by time filters)
+        const revenueAtRisk = riskData.revenueAtRisk;
         document.getElementById("split-failed-count").textContent =
-          data.revenueAtRisk.breakdown.failedPayments.count;
+          revenueAtRisk.breakdown.failedPayments.count;
         document.getElementById("split-failed-amount").textContent =
           "$" +
-          data.revenueAtRisk.breakdown.failedPayments.mrr.toLocaleString(
+          revenueAtRisk.breakdown.failedPayments.mrr.toLocaleString(
             "en-US",
             { maximumFractionDigits: 0 },
           );
         document.getElementById("split-trials-count").textContent =
-          data.revenueAtRisk.breakdown.trialsEnding.count;
+          revenueAtRisk.breakdown.trialsEnding.count;
         document.getElementById("split-trials-amount").textContent =
           "$" +
-          data.revenueAtRisk.breakdown.trialsEnding.mrr.toLocaleString(
+          revenueAtRisk.breakdown.trialsEnding.mrr.toLocaleString(
             "en-US",
             { maximumFractionDigits: 0 },
           );
 
         // Make split card dynamic based on amounts
-        const failedMRR = data.revenueAtRisk.breakdown.failedPayments.mrr;
-        const trialsMRR = data.revenueAtRisk.breakdown.trialsEnding.mrr;
+        const failedMRR = revenueAtRisk.breakdown.failedPayments.mrr;
+        const trialsMRR = revenueAtRisk.breakdown.trialsEnding.mrr;
         const total = failedMRR + trialsMRR;
 
         if (total > 0) {
@@ -3680,10 +3810,10 @@
         } else if (tabName === "funnel-snapshot") {
           // Update time-only section buttons
           document
-            .querySelectorAll("#time-only-header .period-btn")
+            .querySelectorAll("#fs-period-selector .period-btn")
             .forEach((btn) => {
               btn.classList.remove("active");
-              if (btn.dataset.period === timeOnlyPeriod) {
+              if (btn.dataset.fsFilter === fsDateFilter) {
                 btn.classList.add("active");
               }
             });
@@ -3691,16 +3821,19 @@
 
         if (tabName === "gross-revenue" && !grossRevenueData) {
           loadGrossRevenueData();
-        } else if (tabName === "funnel-snapshot" && !funnelSnapshotData) {
+        } else if (tabName === "funnel-snapshot" && (!funnelSnapshotGhlData || !funnelSnapshotChargebeeData)) {
           loadFunnelSnapshotData();
         } else if (tabName === "client-base-health" && !clientBaseHealthData) {
           loadClientBaseHealthData();
         } else if (tabName === "show-rate" && !showRateData) {
           loadShowRateData();
         } else if (tabName === "gross-revenue" && grossRevenueData) {
-          updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
-        } else if (tabName === "funnel-snapshot" && funnelSnapshotData) {
-          updateFunnelSnapshotDashboard(funnelSnapshotData);
+          updateGrossRevenueDashboard(grossRevenueData.custom);
+        } else if (tabName === "funnel-snapshot" && funnelSnapshotGhlData && funnelSnapshotChargebeeData) {
+          // Re-fetch risk data when switching tabs
+          fetch(`${API_BASE_URL}/api/funnel-snapshot`)
+            .then(r => r.json())
+            .then(riskData => updateFunnelSnapshotDashboard(funnelSnapshotGhlData, funnelSnapshotChargebeeData, riskData));
         } else if (tabName === "client-base-health" && clientBaseHealthData) {
           updateClientBaseHealthDashboard(clientBaseHealthData);
         } else if (tabName === "show-rate" && showRateData) {
@@ -3710,61 +3843,110 @@
 
       // Update period handlers - separate for each section
       document.addEventListener("DOMContentLoaded", function () {
-        // Time-only section period buttons
+        // Funnel Snapshot date filter buttons
         document
           .getElementById("time-only-header")
           .addEventListener("click", function (e) {
-            if (e.target.classList.contains("period-btn")) {
-              // Update active state for time-only section
-              e.target.parentElement
-                .querySelectorAll(".period-btn")
-                .forEach((btn) => btn.classList.remove("active"));
+            // Preset buttons
+            if (e.target.classList.contains("period-btn") && e.target.dataset.fsFilter) {
+              const filter = e.target.dataset.fsFilter;
+              document.querySelectorAll("#fs-period-selector .period-btn").forEach(b => b.classList.remove("active"));
               e.target.classList.add("active");
-              timeOnlyPeriod = e.target.dataset.period;
+              fsDateFilter = filter;
 
-              if (currentTab === "funnel-snapshot" && funnelSnapshotData) {
-                updateTimeOnlySection(funnelSnapshotData);
+              document.getElementById("fs-custom-date-wrapper").style.display = filter === "custom" ? "flex" : "none";
+              document.getElementById("fs-range-wrapper").style.display        = filter === "range"  ? "flex" : "none";
+
+              if (filter === "custom") {
+                if (!document.getElementById("fs-custom-date").value) {
+                  document.getElementById("fs-custom-date").value = new Date().toISOString().split("T")[0];
+                }
+                return; // Wait for Apply
               }
+              if (filter === "range") {
+                return; // Wait for Apply
+              }
+              // Preset: fetch immediately
+              fsSelectedDate = "";
+              fsRangeStart   = "";
+              fsRangeEnd     = "";
+              funnelSnapshotGhlData = null;
+              funnelSnapshotChargebeeData = null;
+              loadFunnelSnapshotData();
+            }
+
+            // Apply single date
+            if (e.target.id === "fs-apply-date") {
+              const val = document.getElementById("fs-custom-date").value;
+              if (!val) return;
+              fsSelectedDate = val;
+              funnelSnapshotGhlData = null;
+              funnelSnapshotChargebeeData = null;
+              loadFunnelSnapshotData();
+            }
+
+            // Apply range
+            if (e.target.id === "fs-apply-range") {
+              const s  = document.getElementById("fs-range-start").value;
+              const en = document.getElementById("fs-range-end").value;
+              if (!s || !en) { alert("Please select both start and end dates."); return; }
+              if (s > en)    { alert("Start date must be on or before end date."); return; }
+              fsRangeStart = s;
+              fsRangeEnd   = en;
+              funnelSnapshotGhlData = null;
+              funnelSnapshotChargebeeData = null;
+              loadFunnelSnapshotData();
             }
           });
       });
 
       // Update only time-based section
-      function updateTimeOnlySection(data) {
+      function updateTimeOnlySection(ghlData, chargebeeData) {
+        // Support both {custom:…} (filtered) and legacy {X:{daily/weekly/monthly}…} shapes
+        const isCustom       = !!ghlData.custom;
+        
+        // GHL data
+        const leads          = isCustom ? ghlData.custom.leads                : ghlData.leads[timeOnlyPeriod];
+        const showedPersonal = isCustom ? ghlData.custom.showed.personal      : ghlData.showed.personal[timeOnlyPeriod];
+        const showedBusiness = isCustom ? ghlData.custom.showed.business      : ghlData.showed.business[timeOnlyPeriod];
+        
+        // Chargebee data
+        const enrolledData   = isCustom ? chargebeeData.custom.enrolled        : chargebeeData.enrolled[timeOnlyPeriod];
+        const paidData       = isCustom ? chargebeeData.custom.paid            : chargebeeData.paid[timeOnlyPeriod];
+        const preBillingData = isCustom ? chargebeeData.custom.preBillingCancellations : chargebeeData.preBillingCancellations[timeOnlyPeriod];
+
         document.getElementById("total-leads").textContent =
-          data.leads[timeOnlyPeriod];
+          leads;
         document.getElementById("enrolled-count-funnel").textContent =
-          data.enrolled[timeOnlyPeriod].count;
+          enrolledData.count;
         document.getElementById("enrolled-revenue-funnel").textContent =
-          "$" + data.enrolled[timeOnlyPeriod].revenue.toFixed(0);
+          "$" + enrolledData.revenue.toFixed(0);
         document.getElementById("paid-count-funnel").textContent =
-          data.paid[timeOnlyPeriod].count;
+          paidData.count;
         document.getElementById("paid-revenue-funnel").textContent =
-          "$" + data.paid[timeOnlyPeriod].revenue.toFixed(0);
+          "$" + paidData.revenue.toFixed(0);
         document.getElementById("pre-billing-count").textContent =
-          data.preBillingCancellations[timeOnlyPeriod].count;
+          preBillingData.count;
         document.getElementById("pre-billing-amount").textContent =
           "$" +
-          data.preBillingCancellations[timeOnlyPeriod].amount.toLocaleString(
+          preBillingData.amount.toLocaleString(
             "en-US",
             { maximumFractionDigits: 0 },
           );
 
         // Calculate Close Rate % (Enrolled ÷ Total Showed)
-        const totalShowed =
-          data.showed.personal[timeOnlyPeriod] +
-          data.showed.business[timeOnlyPeriod];
-        const enrolled = data.enrolled[timeOnlyPeriod].count;
+        const totalShowed = showedPersonal + showedBusiness;
+        const enrolled = enrolledData.count;
 
         // Debug logging
         console.log("Close Rate Debug:", {
-          period: timeOnlyPeriod,
-          personalShowed: data.showed.personal[timeOnlyPeriod],
-          businessShowed: data.showed.business[timeOnlyPeriod],
+          period: isCustom ? "custom" : timeOnlyPeriod,
+          personalShowed: showedPersonal,
+          businessShowed: showedBusiness,
           totalShowed: totalShowed,
           enrolled: enrolled,
-          showedData: data.showed,
-          enrolledData: data.enrolled,
+          ghlData: ghlData,
+          chargebeeData: chargebeeData,
         });
 
         const closeRate =
@@ -3774,26 +3956,103 @@
         document.getElementById("close-rate-percentage").textContent =
           closeRate + "%";
 
-        updateFunnelFlowChart(data);
+        updateFunnelFlowChart(ghlData, chargebeeData);
       }
 
-      // Update period handlers
+      // Gross Revenue preset buttons
+      document.getElementById("gr-period-selector").addEventListener("click", function (e) {
+        const btn = e.target.closest(".period-btn");
+        if (!btn) return;
+        const filter = btn.dataset.grFilter;
+        if (!filter) return;
+
+        // Update active state
+        document.querySelectorAll("#gr-period-selector .period-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        grDateFilter = filter;
+
+        const customWrapper = document.getElementById("gr-custom-date-wrapper");
+        const rangeWrapper  = document.getElementById("gr-range-wrapper");
+
+        if (filter === "custom") {
+          customWrapper.style.display = "flex";
+          rangeWrapper.style.display  = "none";
+          grRangeStart = ""; grRangeEnd = "";
+          // Pre-fill with today's date if empty
+          if (!document.getElementById("gr-selected-date").value) {
+            document.getElementById("gr-selected-date").value = new Date().toISOString().split("T")[0];
+          }
+          // Don't fetch yet; wait for Apply
+          return;
+        } else if (filter === "range") {
+          rangeWrapper.style.display  = "flex";
+          customWrapper.style.display = "none";
+          grSelectedDate = "";
+          // Pre-fill start as first day of current month, end as today
+          const today = new Date().toISOString().split("T")[0];
+          if (!document.getElementById("gr-range-start").value) {
+            const firstOfMonth = new Date();
+            firstOfMonth.setDate(1);
+            document.getElementById("gr-range-start").value = firstOfMonth.toISOString().split("T")[0];
+          }
+          if (!document.getElementById("gr-range-end").value) {
+            document.getElementById("gr-range-end").value = today;
+          }
+          // Don't fetch yet; wait for Apply
+          return;
+        } else {
+          customWrapper.style.display = "none";
+          rangeWrapper.style.display  = "none";
+          grSelectedDate = ""; grRangeStart = ""; grRangeEnd = "";
+        }
+
+        // Reload data with new filter
+        grossRevenueData = null;
+        loadGrossRevenueData();
+      });
+
+      // Gross Revenue custom date Apply button
+      document.getElementById("gr-apply-date").addEventListener("click", function () {
+        const dateInput = document.getElementById("gr-selected-date");
+        if (!dateInput.value) {
+          alert("Please select a date first.");
+          return;
+        }
+        grSelectedDate = dateInput.value;
+        grossRevenueData = null;
+        loadGrossRevenueData();
+      });
+
+      // Gross Revenue date range Apply button
+      document.getElementById("gr-apply-range").addEventListener("click", function () {
+        const startInput = document.getElementById("gr-range-start");
+        const endInput   = document.getElementById("gr-range-end");
+        if (!startInput.value || !endInput.value) {
+          alert("Please select both a start date and an end date.");
+          return;
+        }
+        if (startInput.value > endInput.value) {
+          alert("Start date must be on or before the end date.");
+          return;
+        }
+        grRangeStart = startInput.value;
+        grRangeEnd   = endInput.value;
+        grossRevenueData = null;
+        loadGrossRevenueData();
+      });
+
+      // Update period handlers (only client-base-health remains period-based for now)
       document.querySelectorAll(".period-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          // Only handle non-funnel period buttons
-          if (currentTab !== "funnel-snapshot") {
+          // Only handle client-base-health period buttons
+          if (currentTab === "client-base-health") {
             document
-              .querySelectorAll(".period-btn")
+              .querySelectorAll("#client-base-health-tab .period-btn")
               .forEach((b) => b.classList.remove("active"));
             btn.classList.add("active");
             currentPeriod = btn.dataset.period;
 
-            if (currentTab === "gross-revenue" && grossRevenueData) {
-              updateGrossRevenueDashboard(grossRevenueData[currentPeriod]);
-            } else if (
-              currentTab === "client-base-health" &&
-              clientBaseHealthData
-            ) {
+            if (clientBaseHealthData) {
               updateClientBaseHealthDashboard(clientBaseHealthData);
             }
           }

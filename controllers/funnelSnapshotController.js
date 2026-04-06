@@ -36,6 +36,346 @@ async function fetchAllSubscriptionsWithRange(dateRange) {
   return subscriptions;
 }
 
+// Helper: compute a single date range from dateFilter params
+function getFunnelDateRange(dateFilter, selectedDate, startDate, endDate) {
+  const now = new Date();
+
+  if (dateFilter === "range" && startDate && endDate) {
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    const startMs = Date.UTC(sy, sm - 1, sd, 5, 0, 0, 0);
+    const endMs   = Date.UTC(ey, em - 1, ed + 1, 4, 59, 59, 999);
+    return {
+      startISO: new Date(startMs).toISOString(),
+      endISO:   new Date(endMs).toISOString(),
+      startTs:  Math.floor(startMs / 1000),
+      endTs:    Math.floor(endMs / 1000),
+    };
+  }
+
+  if (dateFilter === "custom" && selectedDate) {
+    const [y, m, d] = selectedDate.split("-").map(Number);
+    const startMs = Date.UTC(y, m - 1, d, 5, 0, 0, 0);
+    const endMs   = Date.UTC(y, m - 1, d + 1, 4, 59, 59, 999);
+    return {
+      startISO: new Date(startMs).toISOString(),
+      endISO:   new Date(endMs).toISOString(),
+      startTs:  Math.floor(startMs / 1000),
+      endTs:    Math.floor(endMs / 1000),
+    };
+  }
+
+  // Presets: today, this_week, this_month
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0),
+  );
+  const dayOfWeek = now.getUTCDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday, 5, 0, 0, 0),
+  );
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 5, 0, 0, 0),
+  );
+
+  let startMs;
+  if (dateFilter === "this_week") startMs = weekStart.getTime();
+  else if (dateFilter === "this_month") startMs = monthStart.getTime();
+  else startMs = todayStart.getTime(); // "today" or fallback
+
+  const endMs = Date.now();
+  return {
+    startISO: new Date(startMs).toISOString(),
+    endISO:   new Date(endMs).toISOString(),
+    startTs:  Math.floor(startMs / 1000),
+    endTs:    Math.floor(endMs / 1000),
+  };
+}
+
+// Single-period filtered versions of each data-fetch function
+
+async function getLeadsFiltered(range) {
+  const locationId = "bPdsUgmB6j1uqMsb9EXG";
+  const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+
+  const response = await axios.post(
+    apiUrl,
+    {
+      locationId,
+      page: 1,
+      pageLimit: 500,
+      filters: [
+        {
+          group: "AND",
+          filters: [
+            { field: "tags", operator: "eq", value: "new lead" },
+            { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
+          ],
+        },
+      ],
+    },
+    { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
+  );
+
+  return { count: response.data.contacts.length };
+}
+
+async function getBookedFiltered(range) {
+  const locationId = "bPdsUgmB6j1uqMsb9EXG";
+  const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+
+  const makeQuery = (tag) =>
+    axios.post(
+      apiUrl,
+      {
+        locationId,
+        page: 1,
+        pageLimit: 500,
+        filters: [
+          {
+            group: "AND",
+            filters: [
+              { field: "tags", operator: "eq", value: tag },
+              { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
+            ],
+          },
+        ],
+      },
+      { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
+    );
+
+  const [personal, business] = await Promise.all([
+    makeQuery("confirmed_appointment_status_personal"),
+    makeQuery("confirmed_appointment_status_business"),
+  ]);
+
+  return {
+    personal: personal.data.contacts.length,
+    business: business.data.contacts.length,
+  };
+}
+
+async function getShowedFiltered(range) {
+  const locationId = "bPdsUgmB6j1uqMsb9EXG";
+  const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+
+  const makeQuery = (tag) =>
+    axios.post(
+      apiUrl,
+      {
+        locationId,
+        page: 1,
+        pageLimit: 500,
+        filters: [
+          {
+            group: "AND",
+            filters: [
+              { field: "tags", operator: "eq", value: tag },
+              { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
+            ],
+          },
+        ],
+      },
+      { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
+    );
+
+  const [personal, business] = await Promise.all([
+    makeQuery("showed_appointment_status_personal"),
+    makeQuery("showed_appointment_status_business"),
+  ]);
+
+  return {
+    personal: personal.data.contacts.length,
+    business: business.data.contacts.length,
+  };
+}
+
+async function getEnrolledAndPaidFiltered(range) {
+  const subs = await fetchAllSubscriptionsWithRange({ start: range.startTs, end: range.endTs });
+
+  let enrolledCount = 0, enrolledRevenue = 0, paidCount = 0, paidRevenue = 0;
+  subs.forEach((item) => {
+    const sub = item.subscription;
+    const planItem = sub.subscription_items?.[0];
+    const amount = (planItem?.amount || 0) / 100;
+    if (sub.status === "in_trial") {
+      enrolledCount++;
+      enrolledRevenue += amount;
+    } else if (sub.status === "active") {
+      paidCount++;
+      paidRevenue += amount;
+    }
+  });
+
+  return {
+    enrolled: { count: enrolledCount, revenue: enrolledRevenue },
+    paid:     { count: paidCount,     revenue: paidRevenue },
+  };
+}
+
+async function getMishapsFiltered(range) {
+  const locationId = "bPdsUgmB6j1uqMsb9EXG";
+  const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+
+  const customFieldsResponse = await axios.get(
+    `https://services.leadconnectorhq.com/locations/${locationId}/customFields?model=contact`,
+    { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" } },
+  );
+  const customFields = customFieldsResponse.data.customFields;
+  const personalAmountFieldId = customFields.find((f) => f.fieldKey === "contact.no_show_amount_personal")?.id;
+  const businessAmountFieldId = customFields.find((f) => f.fieldKey === "contact.no_show_amount_business")?.id;
+
+  const mishapTags = [
+    "cancelled_appointment_status_personal",
+    "cancelled_appointment_status_business",
+    "invalid_appointment_status_personal",
+    "invalid_appointment_status_business",
+    "no_show_appointment_status_personal",
+    "no_show_appointment_status_business",
+  ];
+
+  const response = await axios.post(
+    apiUrl,
+    {
+      locationId,
+      page: 1,
+      pageLimit: 500,
+      filters: [
+        {
+          group: "AND",
+          filters: [
+            { group: "OR", filters: mishapTags.map((tag) => ({ field: "tags", operator: "eq", value: tag })) },
+            { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
+          ],
+        },
+      ],
+    },
+    { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
+  );
+
+  const contactDetailsPromises = response.data.contacts.map((contact) =>
+    axios
+      .get(`https://services.leadconnectorhq.com/contacts/${contact.id}`, {
+        headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" },
+      })
+      .then((res) => res.data.contact)
+      .catch(() => null),
+  );
+  const allDetails = (await Promise.all(contactDetailsPromises)).filter((c) => c !== null);
+
+  const getAmount = (contact, fieldId) => {
+    if (!fieldId || !contact.customFields) return 0;
+    const field = contact.customFields.find((f) => f.id === fieldId);
+    return field ? parseFloat(field.value) || 0 : 0;
+  };
+
+  const personalContacts = allDetails.filter(
+    (c) =>
+      c.tags?.includes("cancelled_appointment_status_personal") ||
+      c.tags?.includes("invalid_appointment_status_personal") ||
+      c.tags?.includes("no_show_appointment_status_personal"),
+  );
+  const businessContacts = allDetails.filter(
+    (c) =>
+      c.tags?.includes("cancelled_appointment_status_business") ||
+      c.tags?.includes("invalid_appointment_status_business") ||
+      c.tags?.includes("no_show_appointment_status_business"),
+  );
+
+  return {
+    personal: {
+      count:  personalContacts.length,
+      amount: personalContacts.reduce((sum, c) => sum + getAmount(c, personalAmountFieldId), 0),
+    },
+    business: {
+      count:  businessContacts.length,
+      amount: businessContacts.reduce((sum, c) => sum + getAmount(c, businessAmountFieldId), 0),
+    },
+  };
+}
+
+async function getPreBillingCancellationFiltered(range) {
+  const CHARGEBEE_SITE = "americacreditcare";
+  const CHARGEBEE_API_KEY = "live_V4QeV1Vr1Syp27Q973I9KVmdk2Nx0GIo";
+
+  const fetchCancelled = async () => {
+    const subscriptions = [];
+    let offset = null;
+    for (let i = 0; i < 10; i++) {
+      const params = { limit: 100, "status[is]": "cancelled" };
+      if (offset) params.offset = offset;
+      const response = await axios.get(
+        `https://${CHARGEBEE_SITE}.chargebee.com/api/v2/subscriptions`,
+        { auth: { username: CHARGEBEE_API_KEY, password: "" }, params },
+      );
+      subscriptions.push(...response.data.list.map((item) => item.subscription));
+      if (!response.data.next_offset) break;
+      offset = response.data.next_offset;
+    }
+    return subscriptions;
+  };
+
+  const fetchAllSubs = async () => {
+    const subscriptions = [];
+    let offset = null;
+    for (let i = 0; i < 20; i++) {
+      const params = { limit: 100 };
+      if (offset) params.offset = offset;
+      const response = await axios.get(
+        `https://${CHARGEBEE_SITE}.chargebee.com/api/v2/subscriptions`,
+        { auth: { username: CHARGEBEE_API_KEY, password: "" }, params },
+      );
+      subscriptions.push(...response.data.list.map((item) => item.subscription));
+      if (!response.data.next_offset) break;
+      offset = response.data.next_offset;
+    }
+    return subscriptions;
+  };
+
+  const fetchTxns = async () => {
+    const transactions = [];
+    let offset = null;
+    for (let i = 0; i < 50; i++) {
+      const params = { limit: 100, "type[is]": "payment", "status[is]": "success" };
+      if (offset) params.offset = offset;
+      const response = await axios.get(
+        `https://${CHARGEBEE_SITE}.chargebee.com/api/v2/transactions`,
+        { auth: { username: CHARGEBEE_API_KEY, password: "" }, params },
+      );
+      transactions.push(...response.data.list.map((item) => item.transaction));
+      if (!response.data.next_offset) break;
+      offset = response.data.next_offset;
+    }
+    return transactions;
+  };
+
+  const [cancelledSubs, allSubscriptions, allTransactions] = await Promise.all([
+    fetchCancelled(),
+    fetchAllSubs(),
+    fetchTxns(),
+  ]);
+
+  const customersWithPayments = new Set(allTransactions.map((tx) => tx.customer_id));
+  const preBillingCancellations = cancelledSubs.filter((sub) => !customersWithPayments.has(sub.customer_id));
+
+  // ARPU calculation
+  const totalNetRevenue = allTransactions.reduce((sum, tx) => sum + tx.amount / 100, 0);
+  const activeCustomerIds = new Set();
+  allSubscriptions.forEach((sub) => { if (sub.status === "active") activeCustomerIds.add(sub.customer_id); });
+  const arpu = activeCustomerIds.size > 0 ? totalNetRevenue / activeCustomerIds.size : 297;
+
+  // Filter by the requested date range
+  const filtered = preBillingCancellations.filter(
+    (sub) => sub.cancelled_at >= range.startTs && sub.cancelled_at <= range.endTs,
+  );
+
+  return { count: filtered.length, amount: filtered.length * arpu };
+}
+
 // Get new leads
 async function getLeads() {
   const locationId = "bPdsUgmB6j1uqMsb9EXG";
@@ -1540,6 +1880,65 @@ async function getRevenueAtRisk() {
 // Main controller function
 const getFunnelSnapshot = async (req, res) => {
   try {
+    const { dateFilter, selectedDate, startDate, endDate } = req.query;
+
+    // --- Filtered mode: single date range ---
+    if (dateFilter) {
+      const range = getFunnelDateRange(dateFilter, selectedDate, startDate, endDate);
+
+      const [
+        leadsData,
+        bookedData,
+        showedData,
+        enrolledPaidData,
+        mishapsData,
+        preBillingData,
+        revenueAtRiskData,
+      ] = await Promise.all([
+        getLeadsFiltered(range),
+        getBookedFiltered(range),
+        getShowedFiltered(range),
+        getEnrolledAndPaidFiltered(range),
+        getMishapsFiltered(range),
+        getPreBillingCancellationFiltered(range),
+        getRevenueAtRisk(),
+      ]);
+
+      const enrolled = enrolledPaidData.enrolled.count;
+      const paid     = enrolledPaidData.paid.count;
+      const avgEnrollmentValue = enrolled > 0 ? enrolledPaidData.enrolled.revenue / enrolled : 0;
+
+      const metrics = {
+        personal: {
+          showRate:       bookedData.personal > 0 ? (showedData.personal / bookedData.personal) * 100 : 0,
+          closeRate:      showedData.personal > 0 ? (enrolled / showedData.personal) * 100 : 0,
+          noShowCost:     mishapsData.personal.count * avgEnrollmentValue,
+          paidConversion: enrolled > 0 ? (paid / enrolled) * 100 : 0,
+        },
+        business: {
+          showRate:       bookedData.business > 0 ? (showedData.business / bookedData.business) * 100 : 0,
+          closeRate:      showedData.business > 0 ? (enrolled / showedData.business) * 100 : 0,
+          noShowCost:     mishapsData.business.count * avgEnrollmentValue,
+          paidConversion: enrolled > 0 ? (paid / enrolled) * 100 : 0,
+        },
+      };
+
+      return res.json({
+        custom: {
+          leads:                  leadsData.count,
+          booked:                 bookedData,
+          showed:                 showedData,
+          mishaps:                mishapsData,
+          preBillingCancellations: preBillingData,
+          revenueAtRisk:          revenueAtRiskData,
+          enrolled:               enrolledPaidData.enrolled,
+          paid:                   enrolledPaidData.paid,
+          metrics,
+        },
+      });
+    }
+
+    // --- Legacy mode: daily / weekly / monthly ---
     const [
       leadsData,
       bookedData,

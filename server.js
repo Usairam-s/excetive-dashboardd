@@ -2,6 +2,8 @@ const express = require("express");
 const axios = require("axios");
 const grossRevenueRoutes = require("./routes/grossRevenue");
 const funnelSnapshotRoutes = require("./routes/funnelSnapshot");
+const funnelSnapshotGhlRoutes = require("./routes/funnelSnapshotGhl");
+const funnelSnapshotChargebeeRoutes = require("./routes/funnelSnapshotChargebee");
 const clientBaseHealthRoutes = require("./routes/clientBaseHealth");
 const alertsRoutes = require("./routes/alerts");
 const effectiveLifetimeRoutes = require("./routes/effectiveLifetime");
@@ -46,6 +48,8 @@ app.get("/", (req, res) => {
 app.use("/api/gross-revenue", grossRevenueRoutes);
 app.use("/api/cpc", cpcRoutes);
 app.use("/api/funnel-snapshot", funnelSnapshotRoutes);
+app.use("/api/funnel-snapshot-ghl", funnelSnapshotGhlRoutes);
+app.use("/api/funnel-snapshot-chargebee", funnelSnapshotChargebeeRoutes);
 app.use("/api/client-base-health", clientBaseHealthRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.get("/onlytest", async (req, res) => {
