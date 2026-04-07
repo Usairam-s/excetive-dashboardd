@@ -180,6 +180,32 @@ async function getLeadsFiltered(range) {
   return { count: contacts.length };
 }
 
+// Filtered: Get booked appointments
+async function getBookedFiltered(range) {
+  const makeQuery = (tag) => {
+    const filters = [
+      {
+        group: "AND",
+        filters: [
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
+        ],
+      },
+    ];
+    return fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  };
+
+  const [personal, business] = await Promise.all([
+    makeQuery("confirmed_appointment_status_personal"),
+    makeQuery("confirmed_appointment_status_business"),
+  ]);
+
+  return {
+    personal: personal.length,
+    business: business.length,
+  };
+}
+
 // Filtered: Get showed appointments (for close rate denominator)
 async function getShowedFiltered(range) {
   const makeQuery = (tag) => {
@@ -249,6 +275,61 @@ async function getLeadsLegacy() {
   };
 }
 
+// Legacy: Get booked appointments for daily/weekly/monthly
+async function getBookedLegacy() {
+  const now = new Date();
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0),
+  );
+  const dayOfWeek = now.getUTCDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday, 5, 0, 0, 0),
+  );
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 5, 0, 0, 0),
+  );
+  const todayEnd = new Date();
+
+  const makeQuery = (tag, start, end) => {
+    const filters = [
+      {
+        group: "AND",
+        filters: [
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: start.toISOString(), lte: end.toISOString() } },
+        ],
+      },
+    ];
+    return fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  };
+
+  const [
+    personalDaily, personalWeekly, personalMonthly,
+    businessDaily, businessWeekly, businessMonthly,
+  ] = await Promise.all([
+    makeQuery("confirmed_appointment_status_personal", todayStart, todayEnd),
+    makeQuery("confirmed_appointment_status_personal", weekStart, todayEnd),
+    makeQuery("confirmed_appointment_status_personal", monthStart, todayEnd),
+    makeQuery("confirmed_appointment_status_business", todayStart, todayEnd),
+    makeQuery("confirmed_appointment_status_business", weekStart, todayEnd),
+    makeQuery("confirmed_appointment_status_business", monthStart, todayEnd),
+  ]);
+
+  return {
+    personal: {
+      daily: personalDaily.length,
+      weekly: personalWeekly.length,
+      monthly: personalMonthly.length,
+    },
+    business: {
+      daily: businessDaily.length,
+      weekly: businessWeekly.length,
+      monthly: businessMonthly.length,
+    },
+  };
+}
+
 // Legacy: Get showed for daily/weekly/monthly
 async function getShowedLegacy() {
   const now = new Date();
@@ -313,29 +394,33 @@ const getFunnelSnapshotGhl = async (req, res) => {
     if (dateFilter) {
       // Use EDT timezone (4:15 UTC) for new leads only
       const leadsRange = getGhlDateRangeForLeads(dateFilter, selectedDate, startDate, endDate);
-      // Use standard timezone (5:00 UTC) for showed appointments
-      const showedRange = getGhlDateRange(dateFilter, selectedDate, startDate, endDate);
-      const [leadsData, showedData] = await Promise.all([
+      // Use standard timezone (5:00 UTC) for showed and booked appointments
+      const appointmentRange = getGhlDateRange(dateFilter, selectedDate, startDate, endDate);
+      const [leadsData, bookedData, showedData] = await Promise.all([
         getLeadsFiltered(leadsRange),
-        getShowedFiltered(showedRange),
+        getBookedFiltered(appointmentRange),
+        getShowedFiltered(appointmentRange),
       ]);
 
       return res.json({
         custom: {
           leads: leadsData.count,
+          booked: bookedData,
           showed: showedData,
         },
       });
     }
 
     // Legacy mode
-    const [leadsData, showedData] = await Promise.all([
+    const [leadsData, bookedData, showedData] = await Promise.all([
       getLeadsLegacy(),
+      getBookedLegacy(),
       getShowedLegacy(),
     ]);
 
     res.json({
       leads: leadsData,
+      booked: bookedData,
       showed: showedData,
     });
   } catch (error) {

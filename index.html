@@ -1275,7 +1275,7 @@
                 </div>
                 <div class="card-title">Close Rate %</div>
                 <div class="card-value" id="close-rate-percentage">0%</div>
-                <div class="card-subtitle">Enrolled ÷ Total Showed</div>
+                <div class="card-subtitle">Showed ÷ Booked</div>
               </div>
             </div>
           </div>
@@ -3998,6 +3998,8 @@
         
         // GHL data
         const leads          = isCustom ? ghlData.custom.leads                : ghlData.leads[timeOnlyPeriod];
+        const bookedPersonal = isCustom ? ghlData.custom.booked.personal      : ghlData.booked.personal[timeOnlyPeriod];
+        const bookedBusiness = isCustom ? ghlData.custom.booked.business      : ghlData.booked.business[timeOnlyPeriod];
         const showedPersonal = isCustom ? ghlData.custom.showed.personal      : ghlData.showed.personal[timeOnlyPeriod];
         const showedBusiness = isCustom ? ghlData.custom.showed.business      : ghlData.showed.business[timeOnlyPeriod];
         
@@ -4025,24 +4027,26 @@
             { maximumFractionDigits: 0 },
           );
 
-        // Calculate Close Rate % (Enrolled ÷ Total Showed)
+        // Calculate Close Rate % (Showed ÷ Booked) - GHL only
+        const totalBooked = bookedPersonal + bookedBusiness;
         const totalShowed = showedPersonal + showedBusiness;
-        const enrolled = enrolledData.count;
 
         // Debug logging
         console.log("Close Rate Debug:", {
           period: isCustom ? "custom" : timeOnlyPeriod,
-          personalShowed: showedPersonal,
-          businessShowed: showedBusiness,
+          bookedPersonal: bookedPersonal,
+          bookedBusiness: bookedBusiness,
+          totalBooked: totalBooked,
+          showedPersonal: showedPersonal,
+          showedBusiness: showedBusiness,
           totalShowed: totalShowed,
-          enrolled: enrolled,
           ghlData: ghlData,
           chargebeeData: chargebeeData,
         });
 
         const closeRate =
-          totalShowed > 0
-            ? Math.min((enrolled / totalShowed) * 100, 100).toFixed(1)
+          totalBooked > 0
+            ? Math.min((totalShowed / totalBooked) * 100, 100).toFixed(1)
             : 0;
         document.getElementById("close-rate-percentage").textContent =
           closeRate + "%";
