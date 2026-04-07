@@ -29,7 +29,10 @@ The dashboard presents several business views:
 
 The app is deployed on **Vercel** and the frontend currently points to:
 
-- `https://excetive-dashboard.vercel.app`
+- `https://excetive-dashboardd.vercel.app` (public production URL)
+- Local dev: `http://localhost:3000` (when running npm start locally)
+
+**[Updated 8 April 2026]** Added local frontend serving via Express in server.js. Frontend now auto-detects localhost vs production and adjusts API_BASE_URL accordingly.
 
 ---
 
@@ -96,10 +99,13 @@ If refactoring:
 A lot of logic assumes:
 - **America/New_York**
 - implemented manually by using **5 AM UTC = midnight NY**
+- **EXCEPTION: New leads queries use 4:15 AM UTC (EDT) as midnight**
 
 This appears in multiple controllers and is duplicated.
 
 Any date/time change must be made carefully.
+
+**[Updated 8 April 2026]** New leads in funnelSnapshotGhlController now use 4:15 AM UTC instead of 5:00 AM UTC to align with EDT timezone. All other appointment-based queries (booked, showed) remain at 5:00 AM UTC.
 
 ## 4.3 No shared service layer
 Controllers repeat:
@@ -392,53 +398,55 @@ Risk areas:
 historical completeness depends on fetching enough pages
 time windows are hand-built
 salary allocation is capped to 7 days
-10.2 Funnel Snapshot Controller
-File:
+10.2 Funnel Snapshot Controller (GHL split)
+Files:
 
-controllers/funnelSnapshotController.js
+controllers/funnelSnapshotGhlController.js (NEW - 8 April 2026)
+controllers/funnelSnapshotChargebeeController.js (NEW - 8 April 2026)
+controllers/funnelSnapshotController.js (legacy version, still present)
+
 Purpose:
 
-provide the main funnel view data
-This is one of the largest files and central to the dashboard.
+provide the main funnel view data split by data source
+Separated into GHL and Chargebee dedicated controllers for clarity
 
-Tracks:
+GHL Controller (funnelSnapshotGhlController.js) tracks:
 
-leads
-enrolled
-paid
-booked appointments
-showed appointments
-mishaps
+leads (with EDT timezone 4:15 AM UTC for new leads queries)
+booked appointments personal/business (5:00 AM UTC)
+showed appointments personal/business (5:00 AM UTC)
+Both filtered (custom date ranges) and legacy (daily/weekly/monthly) modes
+
+Chargebee Controller (funnelSnapshotChargebeeController.js) tracks:
+
+enrolled (trial subscriptions)
+paid (active subscriptions)
 pre-billing cancellations
-revenue at risk
-LeadConnector-driven sections:
-
-new leads
-booked personal/business
-showed personal/business
-no-show/cancel/invalid mishaps
-Chargebee-driven sections:
-
-trial subscriptions
-active paid subscriptions
-cancellations
-failed payments
-trials ending
 Frontend expects nested data by:
 
 period
 category
-personal/business split in some sections
+personal/business split (in GHL data)
 This controller drives:
 
-Time-based metrics area
+Time-based metrics area (combined from both sources)
 Revenue-at-risk area
 Appointment funnel area
+Close rate calculation (now GHL-only: Showed ÷ Booked)
+
+Recent Changes (8 April 2026):
+
+Added getBookedFiltered() and getBookedLegacy() functions to funnelSnapshotGhlController
+Booked data now returned in GHL API response as custom.booked.{personal, business} (filtered) and booked.{personal, business}.{daily, weekly, monthly} (legacy)
+Close rate formula changed from Chargebee-based (Enrolled ÷ Total Showed) to GHL-only (Showed ÷ Booked)
+New leads queries use EDT timezone (4:15 AM UTC) instead of 5:00 AM UTC
+All other appointment queries remain at 5:00 AM UTC
+
 Risk areas:
 
 high complexity
 many external calls
-duplicated date logic
+duplicated date logic across filtered and legacy paths
 response contract is large and easy to break
 10.3 Client Base Health Controller
 File:
@@ -829,15 +837,17 @@ Showed
 Close rate in funnel UI
 Close Rate
 =
-Enrolled
-Total Showed
+Showed
+Booked
 ×
 100
 Close Rate= 
-Total Showed
-Enrolled
+Booked
+Showed
 ​
  ×100
+
+**[Updated 8 April 2026]** Changed from Chargebee-based (Enrolled ÷ Total Showed) to GHL-only (Showed ÷ Booked). Both numerator and denominator now come from GHL contacts tagged with showed_appointment_status_* and confirmed_appointment_status_* tags.
 90-day projection
 The code approximates future revenue using:
 
@@ -854,10 +864,15 @@ no service abstraction
 no test coverage
 no schema validation
 no caching
-many network calls per request
+many network calls per request (6 API calls per funnel snapshot load)
 monolithic frontend
-manual timezone math
+manual timezone math (now with EDT offset for leads)
 possible old/dead UI code around form submissions
+
+**[8 April 2026 Updates]**
+- funnelSnapshotController.js split into funnelSnapshotGhlController.js and funnelSnapshotChargebeeController.js for clearer separation of concerns
+- Close rate metric now GHL-only, eliminating Chargebee dependency for this calculation
+- EDT timezone (4:15 AM UTC) introduced for new leads queries only
 15. Safe-change rules for agents
 Before changing anything:
 
@@ -896,7 +911,9 @@ Gross Revenue tab
 /api/effective-lifetime
 Funnel Snapshot tab
 
-/api/funnel-snapshot
+/api/funnel-snapshot-ghl (NEW - 8 April 2026)
+/api/funnel-snapshot-chargebee (NEW - 8 April 2026)
+/api/funnel-snapshot (legacy, kept for backward compatibility)
 /api/weekly-signup-paid-conversion
 Client Base Health tab
 
