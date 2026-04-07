@@ -74,9 +74,9 @@ The app is deployed on **Vercel** and the frontend currently points to:
 Frontend → Express route → controller → external APIs → JSON response → frontend renders cards/tables/charts
 
 ### Deployment model
-- `vercel.json` routes all requests to `server.js`
-- Express serves API only
-- frontend is a static file in repo, not served by Express in a structured multi-page way
+- `vercel.json` routes `/api/*` requests to `server.js` and `/` to `index.html`
+- Local dev uses Express (`server.js`) for API and root page serving
+- Production serves frontend as static HTML and backend as Vercel Node function
 
 ---
 
@@ -139,16 +139,22 @@ Small changes can have wide impact.
 ```text
 excetive-dashboardd/
   .gitignore
+  CLAUDE.md
   [index.html](http://_vscodecontentref_/0)
+  [README.md](http://_vscodecontentref_/1)
   [package.json](http://_vscodecontentref_/1)
   [server.js](http://_vscodecontentref_/2)
   [vercel.json](http://_vscodecontentref_/3)
   controllers/
     [alertsController.js](http://_vscodecontentref_/4)
+    [calendarEventsController.js](http://_vscodecontentref_/5)
     [clientBaseHealthController.js](http://_vscodecontentref_/5)
     [cohortRetentionController.js](http://_vscodecontentref_/6)
+    [cpcController.js](http://_vscodecontentref_/7)
     [effectiveLifetimeController.js](http://_vscodecontentref_/7)
     [formSubmissionsFunnelController.js](http://_vscodecontentref_/8)
+    [funnelSnapshotChargebeeController.js](http://_vscodecontentref_/9)
+    [funnelSnapshotGhlController.js](http://_vscodecontentref_/10)
     [funnelSnapshotController.js](http://_vscodecontentref_/9)
     [grossRevenueController.js](http://_vscodecontentref_/10)
     [monthlyChurnRateController.js](http://_vscodecontentref_/11)
@@ -158,10 +164,14 @@ excetive-dashboardd/
     [weeklySignupPaidConversionController.js](http://_vscodecontentref_/15)
   routes/
     [alerts.js](http://_vscodecontentref_/16)
+    [calendarEvents.js](http://_vscodecontentref_/17)
     [clientBaseHealth.js](http://_vscodecontentref_/17)
     [cohortRetention.js](http://_vscodecontentref_/18)
+    [cpc.js](http://_vscodecontentref_/19)
     [effectiveLifetime.js](http://_vscodecontentref_/19)
     [formSubmissionsFunnel.js](http://_vscodecontentref_/20)
+    [funnelSnapshotChargebee.js](http://_vscodecontentref_/21)
+    [funnelSnapshotGhl.js](http://_vscodecontentref_/22)
     [funnelSnapshot.js](http://_vscodecontentref_/21)
     [grossRevenue.js](http://_vscodecontentref_/22)
     [monthlyChurnRate.js](http://_vscodecontentref_/23)
@@ -305,10 +315,12 @@ currentPeriod
 timeOnlyPeriod
 appointmentPeriod
 Frontend API base URL
-Currently hardcoded to production:
+Auto-detected at runtime:
 
-https://excetive-dashboard.vercel.app
-A localhost version is commented out.
+- localhost -> http://localhost:3000
+- production -> https://excetive-dashboardd.vercel.app
+
+This prevents local development from accidentally calling production APIs.
 
 Initial load behavior
 On page load:
@@ -334,7 +346,9 @@ API response contracts are assumed very strictly.
 8. API endpoints
 Main API list
 /api/gross-revenue
-/api/funnel-snapshot
+/api/funnel-snapshot-ghl
+/api/funnel-snapshot-chargebee
+/api/funnel-snapshot (legacy)
 /api/client-base-health
 /api/alerts
 /api/effective-lifetime
@@ -345,6 +359,8 @@ Main API list
 /api/weekly-net-growth
 /api/show-rate-by-source
 /api/form-submissions-funnel
+/api/cpc
+/api/calendar-events
 9. Route files
 Each route file is minimal.
 
@@ -939,9 +955,20 @@ npm start
 Default port:
 
 3000
-Production frontend currently points to the Vercel URL, not localhost, unless manually changed in the frontend script.
+Frontend auto-detects localhost vs production and adjusts `API_BASE_URL` automatically.
 
-19. Final mental model
+19. Deployment operations
+
+Manual production deploy from local repo (without GitHub integration):
+
+`vercel --prod --yes`
+
+Most recent verified CLI deployment:
+
+- Alias: https://excetive-dashboardd.vercel.app
+- Deployment URL: https://excetive-dashboardd-5one5btm3-shahzebkhan-97-9287s-projects.vercel.app
+
+20. Final mental model
 This is a business KPI dashboard built for fast reporting, not for clean architecture.
 
 The project prioritizes:
