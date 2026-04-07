@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 const grossRevenueRoutes = require("./routes/grossRevenue");
 const funnelSnapshotRoutes = require("./routes/funnelSnapshot");
 const funnelSnapshotGhlRoutes = require("./routes/funnelSnapshotGhl");
@@ -40,9 +41,9 @@ app.use((req, res, next) => {
   }
 });
 
-// Routes
+// Serve static frontend
 app.get("/", (req, res) => {
-  res.json({ message: "Server is running 🚀" });
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.use("/api/gross-revenue", grossRevenueRoutes);

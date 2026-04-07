@@ -1,5 +1,155 @@
 const axios = require("axios");
 
+// Helper: compute a single date range from dateFilter params
+function getClientHealthDateRange(dateFilter, selectedDate, startDate, endDate) {
+  const now = new Date();
+
+  if (dateFilter === "range" && startDate && endDate) {
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    const startMs = Date.UTC(sy, sm - 1, sd, 5, 0, 0, 0);
+    const endMs = Date.UTC(ey, em - 1, ed + 1, 4, 59, 59, 999);
+    return {
+      start: Math.floor(startMs / 1000),
+      end: Math.floor(endMs / 1000),
+    };
+  }
+
+  if (dateFilter === "custom" && selectedDate) {
+    const [y, m, d] = selectedDate.split("-").map(Number);
+    const startMs = Date.UTC(y, m - 1, d, 5, 0, 0, 0);
+    const endMs = Date.UTC(y, m - 1, d + 1, 4, 59, 59, 999);
+    return {
+      start: Math.floor(startMs / 1000),
+      end: Math.floor(endMs / 1000),
+    };
+  }
+
+  // Presets: today, this_week, this_month
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0),
+  );
+  const dayOfWeek = now.getUTCDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysFromMonday,
+      5,
+      0,
+      0,
+      0,
+    ),
+  );
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 5, 0, 0, 0),
+  );
+
+  let startMs;
+  if (dateFilter === "this_week") startMs = weekStart.getTime();
+  else if (dateFilter === "this_month") startMs = monthStart.getTime();
+  else startMs = todayStart.getTime();
+
+  return {
+    start: Math.floor(startMs / 1000),
+    end: Math.floor(now.getTime() / 1000),
+  };
+}
+
+// Filtered: single-range net client growth
+async function getNetClientGrowthFiltered(range) {
+  const CHARGEBEE_SITE = "americacreditcare";
+  const CHARGEBEE_API_KEY = "live_V4QeV1Vr1Syp27Q973I9KVmdk2Nx0GIo";
+
+  const fetchSubscriptions = async (status, dateField) => {
+    const subscriptions = [];
+    let offset = null;
+
+    while (true) {
+      const params = {
+        limit: 100,
+      };
+      params["status[is]"] = status;
+      params[`${dateField}[after]`] = range.start;
+      params[`${dateField}[before]`] = range.end;
+
+      if (offset) params.offset = offset;
+
+      const response = await axios.get(
+        `https://${CHARGEBEE_SITE}.chargebee.com/api/v2/subscriptions`,
+        {
+          auth: { username: CHARGEBEE_API_KEY, password: "" },
+          params,
+        },
+      );
+
+      subscriptions.push(...response.data.list);
+      if (!response.data.next_offset) break;
+      offset = response.data.next_offset;
+    }
+
+    return subscriptions;
+  };
+
+  const [trials, active, cancelled] = await Promise.all([
+    fetchSubscriptions("in_trial", "created_at"),
+    fetchSubscriptions("active", "activated_at"),
+    fetchSubscriptions("cancelled", "cancelled_at"),
+  ]);
+
+  const countUniqueCustomers = (subscriptions) => {
+    const uniqueCustomers = new Set();
+    subscriptions.forEach((item) => {
+      uniqueCustomers.add(item.subscription.customer_id);
+    });
+    return uniqueCustomers.size;
+  };
+
+  const newClients = countUniqueCustomers(trials) + countUniqueCustomers(active);
+  const lostClients = countUniqueCustomers(cancelled);
+  return newClients - lostClients;
+}
+
+// Filtered: single-range active clients
+async function getActiveClientsFiltered(range) {
+  const CHARGEBEE_SITE = "americacreditcare";
+  const CHARGEBEE_API_KEY = "live_V4QeV1Vr1Syp27Q973I9KVmdk2Nx0GIo";
+
+  const subscriptions = [];
+  let offset = null;
+
+  while (true) {
+    const params = {
+      limit: 100,
+      "status[is]": "active",
+      "activated_at[after]": range.start,
+      "activated_at[before]": range.end,
+    };
+
+    if (offset) params.offset = offset;
+
+    const response = await axios.get(
+      `https://${CHARGEBEE_SITE}.chargebee.com/api/v2/subscriptions`,
+      {
+        auth: { username: CHARGEBEE_API_KEY, password: "" },
+        params,
+      },
+    );
+
+    subscriptions.push(...response.data.list);
+    if (!response.data.next_offset) break;
+    offset = response.data.next_offset;
+  }
+
+  const uniqueCustomers = new Set();
+  subscriptions.forEach((item) => {
+    uniqueCustomers.add(item.subscription.customer_id);
+  });
+
+  return uniqueCustomers.size;
+}
+
 // Get net client growth from ChargeBee
 async function getNetClientGrowth() {
   const CHARGEBEE_SITE = "americacreditcare";
@@ -841,6 +991,34 @@ async function get90DayProjection() {
 // Main controller function
 const getClientBaseHealth = async (req, res) => {
   try {
+    const { dateFilter, selectedDate, startDate, endDate } = req.query;
+
+    if (dateFilter) {
+      const range = getClientHealthDateRange(
+        dateFilter,
+        selectedDate,
+        startDate,
+        endDate,
+      );
+
+      const [activeClientsData, netClientGrowthData, retentionRateData, projectionData] =
+        await Promise.all([
+          getActiveClientsFiltered(range),
+          getNetClientGrowthFiltered(range),
+          getRetentionRate(),
+          get90DayProjection(),
+        ]);
+
+      return res.json({
+        custom: {
+          activeClients: activeClientsData,
+          netClientGrowth: netClientGrowthData,
+          retentionRate: retentionRateData,
+          ninetyDayProjection: projectionData,
+        },
+      });
+    }
+
     const [
       activeClientsData,
       netClientGrowthData,

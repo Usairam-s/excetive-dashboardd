@@ -1,5 +1,62 @@
 const axios = require("axios");
 
+// Helper function to paginate through GHL contacts search API
+async function fetchAllContactsPaginated(locationId, token, filters) {
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+  const allContacts = [];
+  let currentPage = 1;
+  let totalFetched = 0;
+  let total = 0;
+
+  console.log(`[GHL PAGINATION START] Fetching contacts with filters:`, JSON.stringify(filters, null, 2));
+
+  do {
+    console.log(`[GHL PAGINATION] Requesting page ${currentPage}, pageLimit: 500`);
+    
+    const response = await axios.post(
+      apiUrl,
+      {
+        locationId,
+        page: currentPage,
+        pageLimit: 500, // Max per request
+        filters,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Version: "2021-07-28",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const contacts = response.data.contacts || [];
+    total = response.data.total || 0;
+    allContacts.push(...contacts);
+    totalFetched += contacts.length;
+
+    console.log(`[GHL PAGINATION] Page ${currentPage} received: ${contacts.length} contacts`);
+    console.log(`[GHL PAGINATION] Total reported by API: ${total}, Total fetched so far: ${totalFetched}`);
+
+    // Break if we've fetched all contacts or if there are no more results
+    if (totalFetched >= total || contacts.length === 0) {
+      console.log(`[GHL PAGINATION END] Stopping. Total fetched: ${totalFetched}, Total available: ${total}`);
+      break;
+    }
+
+    // Check if we're approaching the 10,000 record limit (standard pagination limit)
+    if (totalFetched >= 10000) {
+      console.warn(`Warning: Reached 10,000 contact limit for pagination. Consider implementing cursor-based pagination.`);
+      break;
+    }
+
+    currentPage++;
+  } while (true);
+
+  console.log(`[GHL PAGINATION COMPLETE] Returning ${allContacts.length} contacts`);
+  return allContacts;
+}
+
 // Helper: compute date range from dateFilter params (reused from main controller)
 function getGhlDateRange(dateFilter, selectedDate, startDate, endDate) {
   const now = new Date();
@@ -50,6 +107,58 @@ function getGhlDateRange(dateFilter, selectedDate, startDate, endDate) {
   };
 }
 
+// Helper: compute date range for new leads ONLY using EDT timezone (4:15 UTC offset)
+function getGhlDateRangeForLeads(dateFilter, selectedDate, startDate, endDate) {
+  const now = new Date();
+
+  if (dateFilter === "range" && startDate && endDate) {
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    // EDT: using 4:15 AM UTC as midnight EDT
+    const startMs = Date.UTC(sy, sm - 1, sd, 4, 15, 0, 0);
+    const endMs   = Date.UTC(ey, em - 1, ed + 1, 4, 14, 59, 999);
+    return {
+      startISO: new Date(startMs).toISOString(),
+      endISO:   new Date(endMs).toISOString(),
+    };
+  }
+
+  if (dateFilter === "custom" && selectedDate) {
+    const [y, m, d] = selectedDate.split("-").map(Number);
+    // EDT: using 4:15 AM UTC as midnight EDT
+    const startMs = Date.UTC(y, m - 1, d, 4, 15, 0, 0);
+    const endMs   = Date.UTC(y, m - 1, d + 1, 4, 14, 59, 999);
+    return {
+      startISO: new Date(startMs).toISOString(),
+      endISO:   new Date(endMs).toISOString(),
+    };
+  }
+
+  // Presets: today, this_week, this_month using EDT (4:15 AM UTC)
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 4, 15, 0, 0),
+  );
+  const dayOfWeek = now.getUTCDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday, 4, 15, 0, 0),
+  );
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 4, 15, 0, 0),
+  );
+
+  let startMs;
+  if (dateFilter === "this_week") startMs = weekStart.getTime();
+  else if (dateFilter === "this_month") startMs = monthStart.getTime();
+  else startMs = todayStart.getTime();
+
+  const endMs = Date.now();
+  return {
+    startISO: new Date(startMs).toISOString(),
+    endISO:   new Date(endMs).toISOString(),
+  };
+}
+
 // GHL config
 const GHL_LOCATION_ID = "bPdsUgmB6j1uqMsb9EXG";
 const GHL_TOKEN = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
@@ -57,48 +166,34 @@ const GHL_API_URL = "https://services.leadconnectorhq.com/contacts/search";
 
 // Filtered: Get total leads
 async function getLeadsFiltered(range) {
-  const response = await axios.post(
-    GHL_API_URL,
+  const filters = [
     {
-      locationId: GHL_LOCATION_ID,
-      page: 1,
-      pageLimit: 500,
+      group: "AND",
       filters: [
-        {
-          group: "AND",
-          filters: [
-            { field: "tags", operator: "eq", value: "new lead" },
-            { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-          ],
-        },
+        { field: "tags", operator: "eq", value: "new lead" },
+        { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
       ],
     },
-    { headers: { Authorization: `Bearer ${GHL_TOKEN}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-  );
-  return { count: response.data.contacts.length };
+  ];
+
+  const contacts = await fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  return { count: contacts.length };
 }
 
 // Filtered: Get showed appointments (for close rate denominator)
 async function getShowedFiltered(range) {
-  const makeQuery = (tag) =>
-    axios.post(
-      GHL_API_URL,
+  const makeQuery = (tag) => {
+    const filters = [
       {
-        locationId: GHL_LOCATION_ID,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
-          {
-            group: "AND",
-            filters: [
-              { field: "tags", operator: "eq", value: tag },
-              { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-            ],
-          },
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
         ],
       },
-      { headers: { Authorization: `Bearer ${GHL_TOKEN}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-    );
+    ];
+    return fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  };
 
   const [personal, business] = await Promise.all([
     makeQuery("showed_appointment_status_personal"),
@@ -106,46 +201,40 @@ async function getShowedFiltered(range) {
   ]);
 
   return {
-    personal: personal.data.contacts.length,
-    business: business.data.contacts.length,
+    personal: personal.length,
+    business: business.length,
   };
 }
 
-// Legacy: Get leads for daily/weekly/monthly
+// Legacy: Get leads for daily/weekly/monthly (using EDT timezone: 4:15 AM UTC)
 async function getLeadsLegacy() {
   const now = new Date();
+  // EDT: using 4:15 AM UTC as midnight EDT for new leads
   const todayStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0),
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 4, 15, 0, 0),
   );
   const dayOfWeek = now.getUTCDay();
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const weekStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday, 5, 0, 0, 0),
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday, 4, 15, 0, 0),
   );
   const monthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 5, 0, 0, 0),
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 4, 15, 0, 0),
   );
   const todayEnd = new Date();
 
-  const makeQuery = (start, end) =>
-    axios.post(
-      GHL_API_URL,
+  const makeQuery = (start, end) => {
+    const filters = [
       {
-        locationId: GHL_LOCATION_ID,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
-          {
-            group: "AND",
-            filters: [
-              { field: "tags", operator: "eq", value: "new lead" },
-              { field: "dateAdded", operator: "range", value: { gte: start.toISOString(), lte: end.toISOString() } },
-            ],
-          },
+          { field: "tags", operator: "eq", value: "new lead" },
+          { field: "dateAdded", operator: "range", value: { gte: start.toISOString(), lte: end.toISOString() } },
         ],
       },
-      { headers: { Authorization: `Bearer ${GHL_TOKEN}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-    );
+    ];
+    return fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  };
 
   const [dailyContacts, weeklyContacts, monthlyContacts] = await Promise.all([
     makeQuery(todayStart, todayEnd),
@@ -154,9 +243,9 @@ async function getLeadsLegacy() {
   ]);
 
   return {
-    daily: dailyContacts.data.contacts.length,
-    weekly: weeklyContacts.data.contacts.length,
-    monthly: monthlyContacts.data.contacts.length,
+    daily: dailyContacts.length,
+    weekly: weeklyContacts.length,
+    monthly: monthlyContacts.length,
   };
 }
 
@@ -176,25 +265,18 @@ async function getShowedLegacy() {
   );
   const todayEnd = new Date();
 
-  const makeQuery = (tag, start, end) =>
-    axios.post(
-      GHL_API_URL,
+  const makeQuery = (tag, start, end) => {
+    const filters = [
       {
-        locationId: GHL_LOCATION_ID,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
-          {
-            group: "AND",
-            filters: [
-              { field: "tags", operator: "eq", value: tag },
-              { field: "dateAdded", operator: "range", value: { gte: start.toISOString(), lte: end.toISOString() } },
-            ],
-          },
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: start.toISOString(), lte: end.toISOString() } },
         ],
       },
-      { headers: { Authorization: `Bearer ${GHL_TOKEN}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-    );
+    ];
+    return fetchAllContactsPaginated(GHL_LOCATION_ID, GHL_TOKEN, filters);
+  };
 
   const [
     personalDaily, personalWeekly, personalMonthly,
@@ -210,14 +292,14 @@ async function getShowedLegacy() {
 
   return {
     personal: {
-      daily: personalDaily.data.contacts.length,
-      weekly: personalWeekly.data.contacts.length,
-      monthly: personalMonthly.data.contacts.length,
+      daily: personalDaily.length,
+      weekly: personalWeekly.length,
+      monthly: personalMonthly.length,
     },
     business: {
-      daily: businessDaily.data.contacts.length,
-      weekly: businessWeekly.data.contacts.length,
-      monthly: businessMonthly.data.contacts.length,
+      daily: businessDaily.length,
+      weekly: businessWeekly.length,
+      monthly: businessMonthly.length,
     },
   };
 }
@@ -229,10 +311,13 @@ const getFunnelSnapshotGhl = async (req, res) => {
 
     // Filtered mode
     if (dateFilter) {
-      const range = getGhlDateRange(dateFilter, selectedDate, startDate, endDate);
+      // Use EDT timezone (4:15 UTC) for new leads only
+      const leadsRange = getGhlDateRangeForLeads(dateFilter, selectedDate, startDate, endDate);
+      // Use standard timezone (5:00 UTC) for showed appointments
+      const showedRange = getGhlDateRange(dateFilter, selectedDate, startDate, endDate);
       const [leadsData, showedData] = await Promise.all([
-        getLeadsFiltered(range),
-        getShowedFiltered(range),
+        getLeadsFiltered(leadsRange),
+        getShowedFiltered(showedRange),
       ]);
 
       return res.json({

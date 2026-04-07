@@ -1729,13 +1729,54 @@
         <div
           class="card-header"
           id="client-health-header"
-          style="display: none"
+          style="display: none; flex-direction: column; align-items: flex-start; gap: 10px"
         >
           <h2>Client Base Health</h2>
-          <div class="period-selector">
-            <button class="period-btn active" data-period="daily">Daily</button>
-            <button class="period-btn" data-period="weekly">Weekly</button>
-            <button class="period-btn" data-period="monthly">Monthly</button>
+          <div class="period-selector" id="cbh-period-selector">
+            <button class="period-btn active" data-cbh-filter="today">Today</button>
+            <button class="period-btn" data-cbh-filter="this_week">This Week</button>
+            <button class="period-btn" data-cbh-filter="this_month">This Month</button>
+            <button class="period-btn" data-cbh-filter="custom">Custom Date</button>
+            <button class="period-btn" data-cbh-filter="range">Date Range</button>
+          </div>
+          <div
+            id="cbh-custom-date-wrapper"
+            style="display: none; align-items: center; gap: 8px"
+          >
+            <input
+              type="date"
+              id="cbh-custom-date"
+              style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px"
+            />
+            <button
+              id="cbh-apply-date"
+              style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px"
+            >
+              Apply
+            </button>
+          </div>
+          <div
+            id="cbh-range-wrapper"
+            style="display: none; align-items: center; gap: 8px; flex-wrap: wrap"
+          >
+            <span style="color: #9ca3af; font-size: 13px">From</span>
+            <input
+              type="date"
+              id="cbh-range-start"
+              style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px"
+            />
+            <span style="color: #9ca3af; font-size: 13px">To</span>
+            <input
+              type="date"
+              id="cbh-range-end"
+              style="background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 6px; padding: 6px 10px; font-size: 13px"
+            />
+            <button
+              id="cbh-apply-range"
+              style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px"
+            >
+              Apply
+            </button>
           </div>
         </div>
 
@@ -2448,6 +2489,11 @@
       let currentPeriod = "daily";
       let currentTab = "gross-revenue";
       let timeOnlyPeriod = "daily"; // kept for chart compat
+      // Client Base Health date-filter state
+      let cbhDateFilter = "today";   // today | this_week | this_month | custom | range
+      let cbhSelectedDate = "";      // YYYY-MM-DD, used when cbhDateFilter === "custom"
+      let cbhRangeStart = "";        // YYYY-MM-DD, used when cbhDateFilter === "range"
+      let cbhRangeEnd = "";          // YYYY-MM-DD, used when cbhDateFilter === "range"
       // Funnel Snapshot date-filter state
       let fsDateFilter  = "today";   // today | this_week | this_month | custom | range
       let fsSelectedDate = "";        // YYYY-MM-DD, used when fsDateFilter === "custom"
@@ -2520,8 +2566,23 @@
           document.getElementById("fs-range-wrapper").style.display = "none";
           loadFunnelSnapshotData();
         } else if (tabName === "client-base-health") {
-          currentPeriod = "daily";
+          cbhDateFilter = "today";
+          cbhSelectedDate = "";
+          cbhRangeStart = "";
+          cbhRangeEnd = "";
           clientBaseHealthData = null;
+          document
+            .querySelectorAll("#cbh-period-selector .period-btn")
+            .forEach((b) => b.classList.remove("active"));
+          const cbhTodayBtn = document.querySelector(
+            "#cbh-period-selector [data-cbh-filter='today']",
+          );
+          if (cbhTodayBtn) cbhTodayBtn.classList.add("active");
+          document.getElementById("cbh-custom-date-wrapper")?.style &&
+            (document.getElementById("cbh-custom-date-wrapper").style.display =
+              "none");
+          document.getElementById("cbh-range-wrapper")?.style &&
+            (document.getElementById("cbh-range-wrapper").style.display = "none");
           loadClientBaseHealthData();
         } else if (tabName === "show-rate") {
           showRateData = null;
@@ -2896,9 +2957,16 @@
         try {
           document.getElementById("loading").style.display = "flex";
 
-          const response = await fetch(
-            `${API_BASE_URL}/api/client-base-health`,
-          );
+          let url = `${API_BASE_URL}/api/client-base-health`;
+          if (cbhDateFilter === "range" && cbhRangeStart && cbhRangeEnd) {
+            url += `?dateFilter=range&startDate=${cbhRangeStart}&endDate=${cbhRangeEnd}`;
+          } else if (cbhDateFilter === "custom" && cbhSelectedDate) {
+            url += `?dateFilter=custom&selectedDate=${cbhSelectedDate}`;
+          } else {
+            url += `?dateFilter=${cbhDateFilter}`;
+          }
+
+          const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -3649,16 +3717,30 @@
 
       // Update client base health dashboard
       function updateClientBaseHealthDashboard(data) {
+        const isCustom = !!data.custom;
+        const activeClients = isCustom
+          ? data.custom.activeClients
+          : data.activeClients[currentPeriod];
+        const netGrowth = isCustom
+          ? data.custom.netClientGrowth
+          : data.netClientGrowth[currentPeriod];
+        const retentionRate = isCustom
+          ? data.custom.retentionRate
+          : data.retentionRate;
+        const projection = isCustom
+          ? data.custom.ninetyDayProjection
+          : data.ninetyDayProjection;
+
         document.getElementById("active-clients-count").textContent =
-          data.activeClients[currentPeriod];
+          activeClients;
         document.getElementById("net-client-growth").textContent =
-          data.netClientGrowth[currentPeriod];
+          netGrowth;
 
         document.getElementById("retention-rate").textContent =
-          data.retentionRate.toFixed(1) + "%";
+          retentionRate.toFixed(1) + "%";
         document.getElementById("ninety-day-projection").textContent =
           "$" +
-          data.ninetyDayProjection.toLocaleString("en-US", {
+          projection.toLocaleString("en-US", {
             maximumFractionDigits: 0,
           });
 
@@ -3798,12 +3880,21 @@
         currentTab = tabName;
 
         // Update period button highlights based on current period
-        if (tabName === "gross-revenue" || tabName === "client-base-health") {
+        if (tabName === "gross-revenue") {
           document
             .querySelectorAll("#" + tabName + "-tab .period-btn")
             .forEach((btn) => {
               btn.classList.remove("active");
               if (btn.dataset.period === currentPeriod) {
+                btn.classList.add("active");
+              }
+            });
+        } else if (tabName === "client-base-health") {
+          document
+            .querySelectorAll("#cbh-period-selector .period-btn")
+            .forEach((btn) => {
+              btn.classList.remove("active");
+              if (btn.dataset.cbhFilter === cbhDateFilter) {
                 btn.classList.add("active");
               }
             });
@@ -4041,23 +4132,99 @@
         loadGrossRevenueData();
       });
 
-      // Update period handlers (only client-base-health remains period-based for now)
-      document.querySelectorAll(".period-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          // Only handle client-base-health period buttons
-          if (currentTab === "client-base-health") {
-            document
-              .querySelectorAll("#client-base-health-tab .period-btn")
-              .forEach((b) => b.classList.remove("active"));
-            btn.classList.add("active");
-            currentPeriod = btn.dataset.period;
+      // Client Base Health preset buttons
+      document
+        .getElementById("cbh-period-selector")
+        .addEventListener("click", function (e) {
+          const btn = e.target.closest(".period-btn");
+          if (!btn) return;
+          const filter = btn.dataset.cbhFilter;
+          if (!filter) return;
 
-            if (clientBaseHealthData) {
-              updateClientBaseHealthDashboard(clientBaseHealthData);
+          document
+            .querySelectorAll("#cbh-period-selector .period-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          cbhDateFilter = filter;
+
+          const customWrapper = document.getElementById(
+            "cbh-custom-date-wrapper",
+          );
+          const rangeWrapper = document.getElementById("cbh-range-wrapper");
+
+          if (filter === "custom") {
+            customWrapper.style.display = "flex";
+            rangeWrapper.style.display = "none";
+            cbhRangeStart = "";
+            cbhRangeEnd = "";
+            if (!document.getElementById("cbh-custom-date").value) {
+              document.getElementById("cbh-custom-date").value = new Date()
+                .toISOString()
+                .split("T")[0];
             }
+            return;
           }
+
+          if (filter === "range") {
+            rangeWrapper.style.display = "flex";
+            customWrapper.style.display = "none";
+            cbhSelectedDate = "";
+            const today = new Date().toISOString().split("T")[0];
+            if (!document.getElementById("cbh-range-start").value) {
+              const firstOfMonth = new Date();
+              firstOfMonth.setDate(1);
+              document.getElementById("cbh-range-start").value = firstOfMonth
+                .toISOString()
+                .split("T")[0];
+            }
+            if (!document.getElementById("cbh-range-end").value) {
+              document.getElementById("cbh-range-end").value = today;
+            }
+            return;
+          }
+
+          customWrapper.style.display = "none";
+          rangeWrapper.style.display = "none";
+          cbhSelectedDate = "";
+          cbhRangeStart = "";
+          cbhRangeEnd = "";
+          clientBaseHealthData = null;
+          loadClientBaseHealthData();
         });
-      });
+
+      // Client Base Health custom date Apply button
+      document
+        .getElementById("cbh-apply-date")
+        .addEventListener("click", function () {
+          const dateInput = document.getElementById("cbh-custom-date");
+          if (!dateInput.value) {
+            alert("Please select a date first.");
+            return;
+          }
+          cbhSelectedDate = dateInput.value;
+          clientBaseHealthData = null;
+          loadClientBaseHealthData();
+        });
+
+      // Client Base Health date range Apply button
+      document
+        .getElementById("cbh-apply-range")
+        .addEventListener("click", function () {
+          const startInput = document.getElementById("cbh-range-start");
+          const endInput = document.getElementById("cbh-range-end");
+          if (!startInput.value || !endInput.value) {
+            alert("Please select both a start date and an end date.");
+            return;
+          }
+          if (startInput.value > endInput.value) {
+            alert("Start date must be on or before the end date.");
+            return;
+          }
+          cbhRangeStart = startInput.value;
+          cbhRangeEnd = endInput.value;
+          clientBaseHealthData = null;
+          loadClientBaseHealthData();
+        });
 
       // Initialize with alerts first (priority), then gross revenue tab
       loadAlertsData();

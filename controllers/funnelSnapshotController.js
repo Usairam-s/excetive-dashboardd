@@ -1,5 +1,62 @@
 const axios = require("axios");
 
+// Helper function to paginate through GHL contacts search API
+async function fetchAllContactsPaginated(locationId, token, filters) {
+  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
+  const allContacts = [];
+  let currentPage = 1;
+  let totalFetched = 0;
+  let total = 0;
+
+  console.log(`[PAGINATION START] Fetching contacts with filters:`, JSON.stringify(filters, null, 2));
+
+  do {
+    console.log(`[PAGINATION] Requesting page ${currentPage}, pageLimit: 500`);
+    
+    const response = await axios.post(
+      apiUrl,
+      {
+        locationId,
+        page: currentPage,
+        pageLimit: 500, // Max per request
+        filters,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Version: "2021-07-28",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const contacts = response.data.contacts || [];
+    total = response.data.total || 0;
+    allContacts.push(...contacts);
+    totalFetched += contacts.length;
+
+    console.log(`[PAGINATION] Page ${currentPage} received: ${contacts.length} contacts`);
+    console.log(`[PAGINATION] Total reported by API: ${total}, Total fetched so far: ${totalFetched}`);
+
+    // Break if we've fetched all contacts or if there are no more results
+    if (totalFetched >= total || contacts.length === 0) {
+      console.log(`[PAGINATION END] Stopping. Total fetched: ${totalFetched}, Total available: ${total}`);
+      break;
+    }
+
+    // Check if we're approaching the 10,000 record limit (standard pagination limit)
+    if (totalFetched >= 10000) {
+      console.warn(`Warning: Reached 10,000 contact limit for pagination. Consider implementing cursor-based pagination.`);
+      break;
+    }
+
+    currentPage++;
+  } while (true);
+
+  console.log(`[PAGINATION COMPLETE] Returning ${allContacts.length} contacts`);
+  return allContacts;
+}
+
 // Helper function to fetch subscriptions with date range
 async function fetchAllSubscriptionsWithRange(dateRange) {
   const CHARGEBEE_SITE = "americacreditcare";
@@ -97,54 +154,37 @@ function getFunnelDateRange(dateFilter, selectedDate, startDate, endDate) {
 async function getLeadsFiltered(range) {
   const locationId = "bPdsUgmB6j1uqMsb9EXG";
   const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
-  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
 
-  const response = await axios.post(
-    apiUrl,
+  const filters = [
     {
-      locationId,
-      page: 1,
-      pageLimit: 500,
+      group: "AND",
       filters: [
-        {
-          group: "AND",
-          filters: [
-            { field: "tags", operator: "eq", value: "new lead" },
-            { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-          ],
-        },
+        { field: "tags", operator: "eq", value: "new lead" },
+        { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
       ],
     },
-    { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-  );
+  ];
 
-  return { count: response.data.contacts.length };
+  const contacts = await fetchAllContactsPaginated(locationId, token, filters);
+  return { count: contacts.length };
 }
 
 async function getBookedFiltered(range) {
   const locationId = "bPdsUgmB6j1uqMsb9EXG";
   const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
-  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
 
-  const makeQuery = (tag) =>
-    axios.post(
-      apiUrl,
+  const makeQuery = (tag) => {
+    const filters = [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
-          {
-            group: "AND",
-            filters: [
-              { field: "tags", operator: "eq", value: tag },
-              { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-            ],
-          },
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
         ],
       },
-      { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-    );
+    ];
+    return fetchAllContactsPaginated(locationId, token, filters);
+  };
 
   const [personal, business] = await Promise.all([
     makeQuery("confirmed_appointment_status_personal"),
@@ -152,35 +192,27 @@ async function getBookedFiltered(range) {
   ]);
 
   return {
-    personal: personal.data.contacts.length,
-    business: business.data.contacts.length,
+    personal: personal.length,
+    business: business.length,
   };
 }
 
 async function getShowedFiltered(range) {
   const locationId = "bPdsUgmB6j1uqMsb9EXG";
   const token = "pit-edfb0220-19c9-4d80-a7b1-f7121bb6d650";
-  const apiUrl = "https://services.leadconnectorhq.com/contacts/search";
 
-  const makeQuery = (tag) =>
-    axios.post(
-      apiUrl,
+  const makeQuery = (tag) => {
+    const filters = [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
-          {
-            group: "AND",
-            filters: [
-              { field: "tags", operator: "eq", value: tag },
-              { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-            ],
-          },
+          { field: "tags", operator: "eq", value: tag },
+          { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
         ],
       },
-      { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-    );
+    ];
+    return fetchAllContactsPaginated(locationId, token, filters);
+  };
 
   const [personal, business] = await Promise.all([
     makeQuery("showed_appointment_status_personal"),
@@ -188,8 +220,8 @@ async function getShowedFiltered(range) {
   ]);
 
   return {
-    personal: personal.data.contacts.length,
-    business: business.data.contacts.length,
+    personal: personal.length,
+    business: business.length,
   };
 }
 
@@ -238,26 +270,19 @@ async function getMishapsFiltered(range) {
     "no_show_appointment_status_business",
   ];
 
-  const response = await axios.post(
-    apiUrl,
+  const filters = [
     {
-      locationId,
-      page: 1,
-      pageLimit: 500,
+      group: "AND",
       filters: [
-        {
-          group: "AND",
-          filters: [
-            { group: "OR", filters: mishapTags.map((tag) => ({ field: "tags", operator: "eq", value: tag })) },
-            { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
-          ],
-        },
+        { group: "OR", filters: mishapTags.map((tag) => ({ field: "tags", operator: "eq", value: tag })) },
+        { field: "dateAdded", operator: "range", value: { gte: range.startISO, lte: range.endISO } },
       ],
     },
-    { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", "Content-Type": "application/json" } },
-  );
+  ];
 
-  const contactDetailsPromises = response.data.contacts.map((contact) =>
+  const contacts = await fetchAllContactsPaginated(locationId, token, filters);
+
+  const contactDetailsPromises = contacts.map((contact) =>
     axios
       .get(`https://services.leadconnectorhq.com/contacts/${contact.id}`, {
         headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" },
@@ -422,119 +447,86 @@ async function getLeads() {
   // Use API-level filtering for all periods
   const [dailyContacts, weeklyContacts, monthlyContacts] = await Promise.all([
     // Daily
-    axios.post(
-      apiUrl,
-      {
-        locationId,
-        page: 1,
-        pageLimit: 500,
-        filters: [
-          {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "new lead",
+    fetchAllContactsPaginated(
+      locationId,
+      token,
+      [
+        {
+          group: "AND",
+          filters: [
+            // {
+            //   field: "tags",
+            //   operator: "eq",
+            //   value: "new lead",
+            // },
+            {
+              field: "dateAdded",
+              operator: "range",
+              value: {
+                gte: todayStart.toISOString(),
+                lte: todayEnd.toISOString(),
               },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
+            },
+          ],
         },
-      },
+      ]
     ),
     // Weekly
-    axios.post(
-      apiUrl,
-      {
-        locationId,
-        page: 1,
-        pageLimit: 500,
-        filters: [
-          {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "new lead",
+    fetchAllContactsPaginated(
+      locationId,
+      token,
+      [
+        {
+          group: "AND",
+          filters: [
+            {
+              field: "tags",
+              operator: "eq",
+              value: "new lead",
+            },
+            {
+              field: "dateAdded",
+              operator: "range",
+              value: {
+                gte: weekStart.toISOString(),
+                lte: todayEnd.toISOString(),
               },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
+            },
+          ],
         },
-      },
+      ]
     ),
     // Monthly
-    axios.post(
-      apiUrl,
-      {
-        locationId,
-        page: 1,
-        pageLimit: 500,
-        filters: [
-          {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "new lead",
+    fetchAllContactsPaginated(
+      locationId,
+      token,
+      [
+        {
+          group: "AND",
+          filters: [
+            {
+              field: "tags",
+              operator: "eq",
+              value: "new lead",
+            },
+            {
+              field: "dateAdded",
+              operator: "range",
+              value: {
+                gte: monthStart.toISOString(),
+                lte: todayEnd.toISOString(),
               },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
+            },
+          ],
         },
-      },
+      ]
     ),
   ]);
 
   return {
-    daily: dailyContacts.data.contacts.length,
-    weekly: weeklyContacts.data.contacts.length,
-    monthly: monthlyContacts.data.contacts.length,
+    daily: dailyContacts.length,
+    weekly: weeklyContacts.length,
+    monthly: monthlyContacts.length,
   };
 }
 
@@ -590,233 +582,143 @@ async function getBookedAppointments() {
     businessMonthly,
   ] = await Promise.all([
     // Personal Daily
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: todayStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Personal Weekly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: weekStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Personal Monthly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: monthStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Daily
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: todayStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Weekly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: weekStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Monthly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "confirmed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "confirmed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: monthStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
   ]);
 
   return {
     personal: {
-      daily: personalDaily.data.contacts.length,
-      weekly: personalWeekly.data.contacts.length,
-      monthly: personalMonthly.data.contacts.length,
+      daily: personalDaily.length,
+      weekly: personalWeekly.length,
+      monthly: personalMonthly.length,
     },
     business: {
-      daily: businessDaily.data.contacts.length,
-      weekly: businessWeekly.data.contacts.length,
-      monthly: businessMonthly.data.contacts.length,
+      daily: businessDaily.length,
+      weekly: businessWeekly.length,
+      monthly: businessMonthly.length,
     },
   };
 }
@@ -873,233 +775,143 @@ async function getShowedAppointments() {
     businessMonthly,
   ] = await Promise.all([
     // Personal Daily
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: todayStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Personal Weekly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: weekStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Personal Monthly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_personal",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_personal",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: monthStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Daily
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: todayStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Weekly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: weekStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Business Monthly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                field: "tags",
-                operator: "eq",
-                value: "showed_appointment_status_business",
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            field: "tags",
+            operator: "eq",
+            value: "showed_appointment_status_business",
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: monthStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
   ]);
 
   return {
     personal: {
-      daily: personalDaily.data.contacts.length,
-      weekly: personalWeekly.data.contacts.length,
-      monthly: personalMonthly.data.contacts.length,
+      daily: personalDaily.length,
+      weekly: personalWeekly.length,
+      monthly: personalMonthly.length,
     },
     business: {
-      daily: businessDaily.data.contacts.length,
-      weekly: businessWeekly.data.contacts.length,
-      monthly: businessMonthly.data.contacts.length,
+      daily: businessDaily.length,
+      weekly: businessWeekly.length,
+      monthly: businessMonthly.length,
     },
   };
 }
@@ -1264,122 +1076,77 @@ async function getMishaps() {
 
   const [dailyContacts, weeklyContacts, monthlyContacts] = await Promise.all([
     // Daily
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                group: "OR",
-                filters: mishapTags.map((tag) => ({
-                  field: "tags",
-                  operator: "eq",
-                  value: tag,
-                })),
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: todayStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            group: "OR",
+            filters: mishapTags.map((tag) => ({
+              field: "tags",
+              operator: "eq",
+              value: tag,
+            })),
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: todayStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Weekly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                group: "OR",
-                filters: mishapTags.map((tag) => ({
-                  field: "tags",
-                  operator: "eq",
-                  value: tag,
-                })),
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: weekStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            group: "OR",
+            filters: mishapTags.map((tag) => ({
+              field: "tags",
+              operator: "eq",
+              value: tag,
+            })),
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: weekStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
     // Monthly
-    axios.post(
-      apiUrl,
+    fetchAllContactsPaginated(locationId, token, [
       {
-        locationId,
-        page: 1,
-        pageLimit: 500,
+        group: "AND",
         filters: [
           {
-            group: "AND",
-            filters: [
-              {
-                group: "OR",
-                filters: mishapTags.map((tag) => ({
-                  field: "tags",
-                  operator: "eq",
-                  value: tag,
-                })),
-              },
-              {
-                field: "dateAdded",
-                operator: "range",
-                value: {
-                  gte: monthStart.toISOString(),
-                  lte: todayEnd.toISOString(),
-                },
-              },
-            ],
+            group: "OR",
+            filters: mishapTags.map((tag) => ({
+              field: "tags",
+              operator: "eq",
+              value: tag,
+            })),
+          },
+          {
+            field: "dateAdded",
+            operator: "range",
+            value: {
+              gte: monthStart.toISOString(),
+              lte: todayEnd.toISOString(),
+            },
           },
         ],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Version: "2021-07-28",
-          "Content-Type": "application/json",
-        },
-      },
-    ),
+    ]),
   ]);
 
   // Get detailed contact info for amount calculations
@@ -1401,9 +1168,9 @@ async function getMishaps() {
   };
 
   const [dailyDetails, weeklyDetails, monthlyDetails] = await Promise.all([
-    getContactDetails(dailyContacts.data.contacts),
-    getContactDetails(weeklyContacts.data.contacts),
-    getContactDetails(monthlyContacts.data.contacts),
+    getContactDetails(dailyContacts),
+    getContactDetails(weeklyContacts),
+    getContactDetails(monthlyContacts),
   ]);
 
   const getAmount = (contact, fieldId) => {
